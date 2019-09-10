@@ -1,0 +1,60 @@
+%option outfile="program1_lex.cpp"
+%option noyywrap
+
+%{
+#include<stdio.h>
+%}
+
+int type = 0
+
+INTEGER	[0-9]+
+FLOAT1	[0-9]*\.[0-9]+
+FLOAT2	[0-9]*\.[0-9]+[Ee][\+\-]?[0-9]+
+FLOAT3	[0-9]+[Ee][\+\-]?[0-9]+
+COMPARE	==|<|>|<<|>>|>=|<=|!=
+LOGIC	\|\||\&\&
+MATH	\+|\-|\/|\*
+ENCLOSE	\{|\}|\[|\]|\(|\)
+PUNCT	\.|\,|\;|\:
+KEYWORD	this|if|else|while
+IDENT	_[_0-9a-zA-Z]*
+
+%%
+
+{INTEGER}	{
+	printf( "An int %s\n", yytext );
+	}
+
+{FLOAT1}|{FLOAT2}|{FLOAT3}	{
+	printf( "A float %s\n", yytext );
+	}
+
+{LOGIC}	{
+	printf("logical\n");
+	}
+
+{COMPARE}	{
+	printf("Comparator\n");
+	}
+
+{MATH}	{
+	printf("Math\n");
+	}
+
+{ENCLOSE}	{
+	printf("Enclosing_op\n");
+	}
+
+{PUNCT}	{
+	printf("Punctuation\n");
+	}
+
+{KEYWORD}	{
+	printf("Keyword\n");
+	}
+
+{IDENT}	{
+	printf("Identifier %s\n", yytext);
+	}
+
+%%
