@@ -17,7 +17,7 @@ MATH	\+|\-|\/|\*
 ENCLOSE	\{|\}|\[|\]|\(|\)
 PUNCT	\.|\,|\;|\:
 KEYWORD	this|if|else|while
-IDENT	_[_0-9a-zA-Z]*
+IDENT	[a-zA-Z_][_0-9a-zA-Z]*
 
 %%
 
