@@ -3,9 +3,9 @@
 
 %{
 #include<stdio.h>
+extern int row;
+bool in_comment = false;
 %}
-
-int type = 0
 
 INTEGER	[0-9]+
 FLOAT1	[0-9]*\.[0-9]+
@@ -18,43 +18,69 @@ ENCLOSE	\{|\}|\[|\]|\(|\)
 PUNCT	\.|\,|\;|\:
 KEYWORD	this|if|else|while
 IDENT	[a-zA-Z_][_0-9a-zA-Z]*
+NEWLINE	\n
+SPACE 	" "
+TAB		\t
+COMM	\/\*.*\*\/
+UNRECOGNIZED	\+|=|\-|\&|\^|\%|\$|\#|\@|\!|\~|\`|\"|\||\\|\:|\;
 
 %%
 
 {INTEGER}	{
-	printf( "An int %s\n", yytext );
+	return 8;
 	}
 
 {FLOAT1}|{FLOAT2}|{FLOAT3}	{
-	printf( "A float %s\n", yytext );
+	return 9;
 	}
 
 {LOGIC}	{
-	printf("logical\n");
+	return 2;
 	}
 
 {COMPARE}	{
-	printf("Comparator\n");
+	return 1;
 	}
 
 {MATH}	{
-	printf("Math\n");
+	return 3;
 	}
 
 {ENCLOSE}	{
-	printf("Enclosing_op\n");
+	return 4;
 	}
 
 {PUNCT}	{
-	printf("Punctuation\n");
+	return 5;
 	}
 
 {KEYWORD}	{
-	printf("Keyword\n");
+	return 6;
 	}
 
 {IDENT}	{
-	printf("Identifier %s\n", yytext);
+	return 7;
+	}
+
+{NEWLINE}	{
+	row++;
+	return 11;
+	}
+
+{SPACE}	{
+	return 12;
+	}
+
+{TAB}	{
+	return 13;
+	}
+
+{COMM}	{
+	return 14;
+	}
+
+{UNRECOGNIZED}	{
+	return 10;
 	}
 
 %%
