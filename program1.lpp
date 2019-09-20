@@ -4,7 +4,6 @@
 %{
 #include<stdio.h>
 extern int row;
-bool in_comment = false;
 %}
 
 INTEGER	[0-9]+
@@ -19,10 +18,9 @@ PUNCT	\.|\,|\;|\:
 KEYWORD	this|if|else|while
 IDENT	[a-zA-Z_][_0-9a-zA-Z]*
 NEWLINE	\n
-SPACE 	" "
+SPACE	" "
 TAB		\t
-COMM	\/\*.*\*\/
-UNRECOGNIZED	\+|=|\-|\&|\^|\%|\$|\#|\@|\!|\~|\`|\"|\||\\|\:|\;
+UNRECOGNIZED	.
 
 %%
 
@@ -73,10 +71,6 @@ UNRECOGNIZED	\+|=|\-|\&|\^|\%|\$|\#|\@|\!|\~|\`|\"|\||\\|\:|\;
 
 {TAB}	{
 	return 13;
-	}
-
-{COMM}	{
-	return 14;
 	}
 
 {UNRECOGNIZED}	{
