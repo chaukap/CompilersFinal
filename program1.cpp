@@ -16,17 +16,15 @@ int main()
 		/* ------- Newline -------- */
 		if(rtn == 11){
 			printf("%d\t%d\t%d\t%d\n", row - 1, column, rtn, myScanner.YYLeng());
+            // I tried to put all of the row/column stuff in the lexer but I couldn't think
+            // of a better way to reset the column number.
 			column = 1;
 
-		/* ---- A single space ---- */
-		} else if(rtn == 12) {
+        /* --------- White Space --------- */
+        } else if (rtn == 12) {
+            /* For white space we do nothing. I added this block to be very certain
+               we do nothing. */
 
-		/* ----- A single tab ----- */
-		} else if(rtn == 13) {
-
-		} else if(rtn == 10){
-			printf("%d\t%d\t%d\t%d\t%s\n", row, column, rtn, myScanner.YYLeng(), myScanner.YYText());
-			
 		/* ----- All other recognized symbols ----- */
 		} else {
 			printf("%d\t%d\t%d\t%d\t%s\n", row, column, rtn, myScanner.YYLeng(), myScanner.YYText());

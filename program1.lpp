@@ -9,9 +9,6 @@ int lastLength = 0;
 %}
 
 INTEGER	[0-9]+
-FLOAT1	[0-9]*\.[0-9]+
-FLOAT2	[0-9]*\.[0-9]+[Ee][\+\-]?[0-9]+
-FLOAT3	[0-9]+[Ee][\+\-]?[0-9]+
 COMPARE	==|<|>|<<|>>|>=|<=|!=
 LOGIC	\|\||\&\&
 MATH	\+|\-|\/|\*
@@ -30,12 +27,6 @@ UNRECOGNIZED	.
     column += lastLength;
     lastLength = yyleng;
 	return 8;
-	}
-
-{FLOAT1}|{FLOAT2}|{FLOAT3}	{
-    column += lastLength;
-    lastLength = yyleng;
-	return 9;
 	}
 
 {LOGIC}	{
@@ -96,7 +87,7 @@ UNRECOGNIZED	.
 {TAB}	{
     column += lastLength;
     lastLength = 8 - (column % 8);
-	return 13;
+	return 12;
 	}
 
 {UNRECOGNIZED}	{
