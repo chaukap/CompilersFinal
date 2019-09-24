@@ -8,3 +8,6 @@ program1_lex : program1.lpp
 clean :
 	rm program1_lex.cpp
 	rm program
+
+test : all
+	./program < testfile.txt
