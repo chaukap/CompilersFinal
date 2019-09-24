@@ -12,7 +12,7 @@ int main()
 	printf("Line\tColumn\tType\tLength\tValue\n");
 	
 	/* ----- Loop through the input file ----- */
-	while((rtn = myScanner.yylex()) != 0) {
+	while((rtn = myScanner.yylex()) > 0) {
 		/* ------- Newline -------- */
 		if(rtn == 11){
 			printf("%d\t%d\t%d\t%d\n", row - 1, column, rtn, myScanner.YYLeng());

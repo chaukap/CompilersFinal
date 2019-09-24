@@ -102,10 +102,10 @@ COMMENT_END     \*\/
 {UNRECOGNIZED}	{
     errorCount++;
     unput(yytext[0]);
+    BEGIN(ERROR);
     if(errorCount > 20){
         return -1;
     }
-    BEGIN(ERROR);
 	return 12;
 	}
 
