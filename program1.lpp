@@ -1,6 +1,8 @@
 %option outfile="program1_lex.cpp"
 %option noyywrap
 
+%x COMMENT
+
 %{
 #include<stdio.h>
 int row = 1;
@@ -20,6 +22,9 @@ NEWLINE	\n
 SPACE	" "
 TAB		\t
 UNRECOGNIZED	.
+COMMENT_START   \/\*
+COMMENT_INTERIOR .
+COMMENT_END     \*\/
 
 %%
 
@@ -95,5 +100,32 @@ UNRECOGNIZED	.
     lastLength = yyleng;
 	return 10;
 	}
+
+{COMMENT_START} {
+    column += lastLength;
+    lastLength = yyleng;
+    BEGIN(COMMENT);
+    return 12;
+    }
+
+<COMMENT>{COMMENT_INTERIOR} {
+    column += lastLength;
+    lastLength = yyleng;
+    return 12;
+    }
+
+<COMMENT>{NEWLINE}    {
+    column = 1;
+    lastLength = 0;
+	row++;
+	return 12;
+    }
+
+<COMMENT>{COMMENT_END}  {
+    column += lastLength;
+    lastLength = yyleng;
+	BEGIN(0);
+    return 12;
+    }
 
 %%

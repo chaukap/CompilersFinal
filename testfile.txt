@@ -1,0 +1,4 @@
+int x = 6 /* And now a comment
+            that spans
+            mulpiple lines */ wow theres stuff after the comment
+this x && 4
