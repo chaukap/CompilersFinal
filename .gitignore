@@ -1,0 +1,5 @@
+program
+.DS_Store
+a.out.dSYM/
+program1_lex.cpp
+program.dSYM/

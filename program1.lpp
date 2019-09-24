@@ -3,7 +3,9 @@
 
 %{
 #include<stdio.h>
-extern int row;
+int row = 1;
+int column = 1;
+int lastLength = 0;
 %}
 
 INTEGER	[0-9]+
@@ -25,55 +27,81 @@ UNRECOGNIZED	.
 %%
 
 {INTEGER}	{
+    column += lastLength;
+    lastLength = yyleng;
 	return 8;
 	}
 
 {FLOAT1}|{FLOAT2}|{FLOAT3}	{
+    column += lastLength;
+    lastLength = yyleng;
 	return 9;
 	}
 
 {LOGIC}	{
+    column += lastLength;
+    lastLength = yyleng;
 	return 2;
 	}
 
 {COMPARE}	{
+    column += lastLength;
+    lastLength = yyleng;
 	return 1;
 	}
 
 {MATH}	{
+    column += lastLength;
+    lastLength = yyleng;
 	return 3;
 	}
 
 {ENCLOSE}	{
+    column += lastLength;
+    lastLength = yyleng;
 	return 4;
 	}
 
 {PUNCT}	{
+    column += lastLength;
+    lastLength = yyleng;
 	return 5;
 	}
 
 {KEYWORD}	{
+    column += lastLength;
+    lastLength = yyleng;
 	return 6;
 	}
 
 {IDENT}	{
+    column += lastLength;
+    lastLength = yyleng;
 	return 7;
 	}
 
 {NEWLINE}	{
+    column += lastLength;
+    lastLength = 0;
 	row++;
 	return 11;
 	}
 
 {SPACE}	{
+    column += lastLength;
+    lastLength = yyleng;
 	return 12;
 	}
 
 {TAB}	{
+    column += lastLength;
+    lastLength = 8 - (column % 8);
 	return 13;
 	}
 
 {UNRECOGNIZED}	{
+    column += lastLength;
+    lastLength = yyleng;
 	return 10;
 	}
 
