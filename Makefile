@@ -1,6 +1,6 @@
 
-all : program1.cpp program1_lex
-	g++ -ggdb -Wall -std=c++11 program1.cpp program1_lex.cpp -o program
+all : program1.cpp program1_lex tokens.cpp
+	g++ -ggdb -Wall -std=c++11 program1.cpp program1_lex.cpp tokens.cpp -o program
 
 program1_lex : program1.lpp
 	flex++ --warn program1.lpp

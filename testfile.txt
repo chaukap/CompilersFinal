@@ -1,7 +1,9 @@
-int x = 6 /* And now a comment
-            that spans
-            mulpiple lines */ wow theres stuff after the comment
-this x && 4
-4 this {} // Oh no a c++ style comment! what will I do?
-hereComesAnUnknownCharacter asdf@dfg+4
-@@@@@@@@@@@@@@@@@@@@@@
+int
+void class new print
+read return while if
+else this null
+[ ] {} != == < > <= >= && || ! 
++ - * / % . ; ,
+() ( ) = // 
+7 +7 -7
+

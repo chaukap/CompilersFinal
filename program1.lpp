@@ -1,162 +1,335 @@
 %option outfile="program1_lex.cpp"
 %option noyywrap
 
-%x COMMENT
-%x CPLUSCOMMENT
-%x ERROR
+%x COMMENT_STATE
+%x CPLUSCOMMENT_STATE
+%x ERROR_STATE
 
 %{
 #include<stdio.h>
+#include "tokens.hpp"
 int row = 1;
 int column = 1;
 int lastLength = 0;
 int errorCount = 0;
 %}
 
-INTEGER	[0-9]+
-COMPARE	==|<|>|<<|>>|>=|<=|!=
-LOGIC	\|\||\&\&
-MATH	\+|\-|\/|\*
-ENCLOSE	\{|\}|\[|\]|\(|\)
-PUNCT	\.|\,|\;|\:
-KEYWORD	this|if|else|while
-IDENT	[a-zA-Z_][_0-9a-zA-Z]*
-NEWLINE	\n
-SPACE	" "
-TAB		\t
-UNRECOGNIZED	.
-CPLUSPLUSCOMMENT    \/\/
-COMMENT_START   \/\*
-COMMENT_INTERIOR .
-COMMENT_END     \*\/
-
 %%
 
-{INTEGER}	{
+[0-9]+	{
     column += lastLength;
     lastLength = yyleng;
-	return 8;
+	return NUMBER;
 	}
 
-{LOGIC}	{
+==	{
     column += lastLength;
     lastLength = yyleng;
-	return 2;
+	return EQ;
 	}
 
-{COMPARE}	{
+!=	{
     column += lastLength;
     lastLength = yyleng;
-	return 1;
+	return NEQ;
 	}
 
-{MATH}	{
+>	{
     column += lastLength;
     lastLength = yyleng;
-	return 3;
+	return GT;
 	}
 
-{ENCLOSE}	{
+\<   {
     column += lastLength;
     lastLength = yyleng;
-	return 4;
+	return LT;
 	}
 
-{PUNCT}	{
+>=	    {
     column += lastLength;
     lastLength = yyleng;
-	return 5;
+	return GEQ;
 	}
 
-{KEYWORD}	{
+\<=	{
     column += lastLength;
     lastLength = yyleng;
-	return 6;
+	return LEQ;
 	}
 
-{IDENT}	{
+&&  {
     column += lastLength;
     lastLength = yyleng;
-	return 7;
+	return AND;
 	}
 
-{NEWLINE}	{
+\|\|    {
     column += lastLength;
+    lastLength = yyleng;
+	return OR;
+    }
+
+!   {
+    column += lastLength;
+    lastLength = yyleng;
+	return NOT;
+    }
+
+\+    {
+    column += lastLength;
+    lastLength = yyleng;
+	return PLUS;
+    }
+
+-    {
+    column += lastLength;
+    lastLength = yyleng;
+	return MINUS;
+    }
+
+\*    {
+    column += lastLength;
+    lastLength = yyleng;
+	return TIMES;
+    }
+
+\/    {
+    column += lastLength;
+    lastLength = yyleng;
+	return DIV;
+    }
+
+\%  {
+    column += lastLength;
+    lastLength = yyleng;
+	return MOD;
+    }
+
+;	{
+    column += lastLength;
+    lastLength = yyleng;
+	return SEMI;
+	}
+
+=   {
+    column += lastLength;
+    lastLength = yyleng;
+	return ASSIGN;
+    }
+
+\.	{
+    column += lastLength;
+    lastLength = yyleng;
+	return DOT;
+	}
+
+void	{
+    column += lastLength;
+    lastLength = yyleng;
+	return VOID;
+	}
+
+class	{
+    column += lastLength;
+    lastLength = yyleng;
+	return CLASS;
+	}
+
+new	{
+    column += lastLength;
+    lastLength = yyleng;
+	return NEW;
+	}
+
+print   {
+    column += lastLength;
+    lastLength = yyleng;
+	return PRINT;
+    }
+
+read   {
+    column += lastLength;
+    lastLength = yyleng;
+	return READ;
+    }
+
+return   {
+    column += lastLength;
+    lastLength = yyleng;
+	return RETURN;
+    }
+
+else   {
+    column += lastLength;
+    lastLength = yyleng;
+	return ELSE;
+    }
+
+null   {
+    column += lastLength;
+    lastLength = yyleng;
+	return NULLT;
+    }
+
+this   {
+    column += lastLength;
+    lastLength = yyleng;
+	return THIS;
+    }
+
+if   {
+    column += lastLength;
+    lastLength = yyleng;
+	return IF;
+    }
+
+while   {
+    column += lastLength;
+    lastLength = yyleng;
+	return WHILE;
+    }
+
+int {
+    column += lastLength;
+    lastLength = yyleng;
+	return INT;
+    }
+
+[a-zA-Z_][_0-9a-zA-Z]*	{
+    column += lastLength;
+    lastLength = yyleng;
+	return IDENT;
+	}
+
+\n	{
+    column = 1;
     lastLength = 0;
 	row++;
-	return 11;
+	return IGNORE;
 	}
 
-{SPACE}	{
+" " {
     column += lastLength;
     lastLength = yyleng;
-	return 12;
+	return IGNORE;
 	}
 
-{TAB}	{
+\t	{
     column += lastLength;
     lastLength = 8 - (column % 8);
-	return 12;
+	return IGNORE;
 	}
 
-{UNRECOGNIZED}	{
+\{  {
+    column += lastLength;
+    lastLength = yyleng;
+	return LBRACE;
+    }
+
+\}  {
+    column += lastLength;
+    lastLength = yyleng;
+	return RBRACE;
+    }
+
+\)  {
+    column += lastLength;
+    lastLength = yyleng;
+	return RPAREN;
+    }
+
+\(  {
+    column += lastLength;
+    lastLength = yyleng;
+	return LPAREN;
+    }
+
+\[   {
+    column += lastLength;
+    lastLength = yyleng;
+	return LBRACK;
+    }
+
+\]  {
+    column += lastLength;
+    lastLength = yyleng;
+	return RBRACK;
+    }
+
+,   {
+    column += lastLength;
+    lastLength = yyleng;
+	return COMMA;
+    }
+
+.	{
     errorCount++;
     unput(yytext[0]);
-    BEGIN(ERROR);
+    BEGIN(ERROR_STATE);
     if(errorCount > 20){
-        return -1;
+        return ERRORS;
     }
-	return 12;
+	return IGNORE;
 	}
 
-<ERROR>.[a-zA-Z_]*   {
+<ERROR_STATE>.    {
     column += lastLength;
     lastLength = yyleng;
     BEGIN(0);
-    return 10;
+    return ER_CH;
+    }    
+
+<ERROR_STATE>.[0-9a-zA-Z_]*   {
+    column += lastLength;
+    lastLength = yyleng;
+    BEGIN(0);
+    return ER_WD;
     }
 
-{CPLUSPLUSCOMMENT}  {
+\/\/  {
+    column += lastLength;
+    lastLength = 0;
+    BEGIN(CPLUSCOMMENT_STATE);
+    return COMMENT;
+    }
+
+<CPLUSCOMMENT_STATE>. {
+    return IGNORE;
+    }
+
+<CPLUSCOMMENT_STATE>\n {
     column = 1;
     row++;
-    BEGIN(CPLUSCOMMENT);
-    return 12;
-    }
-
-<CPLUSCOMMENT>{COMMENT_INTERIOR} {
-    return 12;
-    }
-
-<CPLUSCOMMENT>{NEWLINE} {
     BEGIN(0);
-    return 12;
+    return IGNORE;
     }
 
-{COMMENT_START} {
+\/\* {
     column += lastLength;
     lastLength = yyleng;
-    BEGIN(COMMENT);
-    return 12;
+    BEGIN(COMMENT_STATE);
+    return IGNORE;
     }
 
-<COMMENT>{COMMENT_INTERIOR} {
+<COMMENT_STATE>. {
     column += lastLength;
     lastLength = yyleng;
-    return 12;
+    return IGNORE;
     }
 
-<COMMENT>{NEWLINE}    {
+<COMMENT_STATE>\n    {
     column = 1;
     lastLength = 0;
 	row++;
-	return 12;
+	return IGNORE;
     }
 
-<COMMENT>{COMMENT_END}  {
+<COMMENT_STATE>\*\/  {
     column += lastLength;
     lastLength = yyleng;
 	BEGIN(0);
-    return 12;
+    return IGNORE;
     }
 
 %%
