@@ -2,12 +2,15 @@
 %option noyywrap
 
 %x COMMENT
+%x CPLUSCOMMENT
+%x ERROR
 
 %{
 #include<stdio.h>
 int row = 1;
 int column = 1;
 int lastLength = 0;
+int errorCount = 0;
 %}
 
 INTEGER	[0-9]+
@@ -22,6 +25,7 @@ NEWLINE	\n
 SPACE	" "
 TAB		\t
 UNRECOGNIZED	.
+CPLUSPLUSCOMMENT    \/\/
 COMMENT_START   \/\*
 COMMENT_INTERIOR .
 COMMENT_END     \*\/
@@ -96,10 +100,37 @@ COMMENT_END     \*\/
 	}
 
 {UNRECOGNIZED}	{
+    errorCount++;
+    unput(yytext[0]);
+    if(errorCount > 20){
+        return -1;
+    }
+    BEGIN(ERROR);
+	return 12;
+	}
+
+<ERROR>.[a-zA-Z_]*   {
     column += lastLength;
     lastLength = yyleng;
-	return 10;
-	}
+    BEGIN(0);
+    return 10;
+    }
+
+{CPLUSPLUSCOMMENT}  {
+    column = 1;
+    row++;
+    BEGIN(CPLUSCOMMENT);
+    return 12;
+    }
+
+<CPLUSCOMMENT>{COMMENT_INTERIOR} {
+    return 12;
+    }
+
+<CPLUSCOMMENT>{NEWLINE} {
+    BEGIN(0);
+    return 12;
+    }
 
 {COMMENT_START} {
     column += lastLength;
