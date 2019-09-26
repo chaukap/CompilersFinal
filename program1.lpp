@@ -8,9 +8,13 @@
 %{
 #include<stdio.h>
 #include "tokens.hpp"
+/* true if there is a value associated with the lexeme */
+bool hasValue = false;
 int row = 1;
 int column = 1;
+/* lastLength should only be used internally. */
 int lastLength = 0;
+/* The number of errors encountered so far */
 int errorCount = 0;
 %}
 
@@ -19,186 +23,217 @@ int errorCount = 0;
 [0-9]+	{
     column += lastLength;
     lastLength = yyleng;
+    hasValue = true;
 	return NUMBER;
 	}
 
 ==	{
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return EQ;
 	}
 
 !=	{
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return NEQ;
 	}
 
 >	{
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return GT;
 	}
 
 \<   {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return LT;
 	}
 
 >=	    {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return GEQ;
 	}
 
 \<=	{
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return LEQ;
 	}
 
 &&  {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return AND;
 	}
 
 \|\|    {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return OR;
     }
 
 !   {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return NOT;
     }
 
 \+    {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return PLUS;
     }
 
 -    {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return MINUS;
     }
 
 \*    {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return TIMES;
     }
 
 \/    {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return DIV;
     }
 
 \%  {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return MOD;
     }
 
 ;	{
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return SEMI;
 	}
 
 =   {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return ASSIGN;
     }
 
 \.	{
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return DOT;
 	}
 
 void	{
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return VOID;
 	}
 
 class	{
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return CLASS;
 	}
 
 new	{
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return NEW;
 	}
 
 print   {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return PRINT;
     }
 
 read   {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return READ;
     }
 
 return   {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return RETURN;
     }
 
 else   {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return ELSE;
     }
 
 null   {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return NULLT;
     }
 
 this   {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return THIS;
     }
 
 if   {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return IF;
     }
 
 while   {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return WHILE;
     }
 
 int {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return INT;
     }
 
 [a-zA-Z_][_0-9a-zA-Z]*	{
     column += lastLength;
     lastLength = yyleng;
+    hasValue = true;
 	return IDENT;
 	}
 
@@ -206,60 +241,70 @@ int {
     column = 1;
     lastLength = 0;
 	row++;
+    hasValue = false;
 	return IGNORE;
 	}
 
 " " {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return IGNORE;
 	}
 
 \t	{
     column += lastLength;
     lastLength = 8 - (column % 8);
+    hasValue = false;
 	return IGNORE;
 	}
 
 \{  {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return LBRACE;
     }
 
 \}  {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return RBRACE;
     }
 
 \)  {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return RPAREN;
     }
 
 \(  {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return LPAREN;
     }
 
 \[   {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return LBRACK;
     }
 
 \]  {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return RBRACK;
     }
 
 ,   {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	return COMMA;
     }
 
@@ -267,6 +312,7 @@ int {
     errorCount++;
     unput(yytext[0]);
     BEGIN(ERROR_STATE);
+    hasValue = false;
     if(errorCount > 20){
         return ERRORS;
     }
@@ -276,6 +322,7 @@ int {
 <ERROR_STATE>.    {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = true;
     BEGIN(0);
     return ER_CH;
     }    
@@ -283,6 +330,7 @@ int {
 <ERROR_STATE>.[0-9a-zA-Z_]*   {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = true;
     BEGIN(0);
     return ER_WD;
     }
@@ -290,17 +338,20 @@ int {
 \/\/  {
     column += lastLength;
     lastLength = 0;
+    hasValue = false;
     BEGIN(CPLUSCOMMENT_STATE);
     return COMMENT;
     }
 
 <CPLUSCOMMENT_STATE>. {
+    hasValue = false;
     return IGNORE;
     }
 
 <CPLUSCOMMENT_STATE>\n {
     column = 1;
     row++;
+    hasValue = false;
     BEGIN(0);
     return IGNORE;
     }
@@ -308,6 +359,7 @@ int {
 \/\* {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
     BEGIN(COMMENT_STATE);
     return IGNORE;
     }
@@ -315,12 +367,14 @@ int {
 <COMMENT_STATE>. {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
     return IGNORE;
     }
 
 <COMMENT_STATE>\n    {
     column = 1;
     lastLength = 0;
+    hasValue = false;
 	row++;
 	return IGNORE;
     }
@@ -328,6 +382,7 @@ int {
 <COMMENT_STATE>\*\/  {
     column += lastLength;
     lastLength = yyleng;
+    hasValue = false;
 	BEGIN(0);
     return IGNORE;
     }

@@ -4,6 +4,7 @@
 /* This is a small program so I just made these globals */
 extern int row;
 extern int column;
+extern bool hasValue;
 int rtn;
 yyFlexLexer myScanner;
 
@@ -25,13 +26,11 @@ int main()
             break;
             
         /* ----- All other recognized symbols ----- */
-        } else {
-            if(rtn == NUMBER){
-                printf("%d\t%d\t%s\t%s\n", row, column, tokenToString((token) rtn), myScanner.YYText());
-            } else {
-			    printf("%d\t%d\t%s\t%s\n", row, column, tokenToString((token) rtn));
-            }
-		}
+        } else if(hasValue) {
+            printf("%d\t%d\t%s\t%s\n", row, column, tokenToString((token) rtn), myScanner.YYText());
+		} else {
+            printf("%d\t%d\t%s\n", row, column, tokenToString((token) rtn));
+        }
 	}
 
 }
