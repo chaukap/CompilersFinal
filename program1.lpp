@@ -327,7 +327,7 @@ int {
     return ER_CH;
     }    
 
-<ERROR_STATE>.[0-9a-zA-Z_]*   {
+<ERROR_STATE>.[a-zA-Z_][0-9a-zA-Z_]*   {
     column += lastLength;
     lastLength = yyleng;
     hasValue = true;
@@ -340,7 +340,7 @@ int {
     lastLength = 0;
     hasValue = false;
     BEGIN(CPLUSCOMMENT_STATE);
-    return COMMENT;
+    return IGNORE;
     }
 
 <CPLUSCOMMENT_STATE>. {
