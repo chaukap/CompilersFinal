@@ -9,9 +9,9 @@
 
 char buf[256];
 
-// Takes a token and returns it's string representation. 
+// Takes a yytokentype and returns it's string representation. 
 // DON'T WORRY ABOUT FREEING ANYTHING I WILL TAKE CARE OF THAT
-char* tokenToString(token t){
+char* tokenToString(yytokentype t){
   switch(t){
     case IGNORE:
       strcpy(buf, "IGNORE");
@@ -143,7 +143,7 @@ char* tokenToString(token t){
       strcpy(buf, "NUMBER");
       break;
     default:
-      strcpy(buf, "Unknown token!");
+      strcpy(buf, "Unknown yytokentype!");
       break;
   }
   return buf;

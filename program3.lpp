@@ -6,8 +6,9 @@
  * Flex file. 
  */
 
-%option outfile="program2_lex.cpp"
+%option outfile="program3_lex.cpp"
 %option noyywrap
+%option yylineno
 
 %x COMMENT_STATE
 %x CPLUSCOMMENT_STATE
@@ -15,25 +16,40 @@
 
 
 %{
-#include<stdio.h>
-#include "tokens.hpp"
+#include<iostream>
+#include "node.hpp"
+#include"program3.tab.hpp"
+
+using std::cout;
+using std::endl;
+using std::cerr;
+
 /* true if there is a value associated with the lexeme */
 bool hasValue = false;
 int row = 1;
 int column = 1;
+
 /* lastLength should only be used internally. */
 int lastLength = 0;
 /* The number of errors encountered so far */
 int errorCount = 0;
+
+void yyerror(const char *string)
+{
+  cerr << string << endl;
+  return;
+}
 %}
 
 %%
 
 [0-9]+	{
+  yylval.ttype=new Node;
+  yylval.ttype->setval(atoi(yytext));
   column += lastLength;
   lastLength = yyleng;
   hasValue = true;
-  return NUMBER;
+  return NUM;
   }
 
 ==	{
@@ -251,21 +267,18 @@ int {
   lastLength = 0;
   row++;
   hasValue = false;
-  return IGNORE;
   }
 
 " " {
   column += lastLength;
   lastLength = yyleng;
   hasValue = false;
-  return IGNORE;
   }
 
 \t	{
   column += lastLength;
   lastLength = 8 - (column % 8);
   hasValue = false;
-  return IGNORE;
   }
 
 \{  {
@@ -325,7 +338,6 @@ int {
   if(errorCount > 20){
       return ERRORS;
   }
-  return IGNORE;
   }
 
 <ERROR_STATE>.    {
@@ -349,12 +361,10 @@ int {
   lastLength = 0;
   hasValue = false;
   BEGIN(CPLUSCOMMENT_STATE);
-  return IGNORE;
   }
 
 <CPLUSCOMMENT_STATE>. {
   hasValue = false;
-  return IGNORE;
   }
 
 <CPLUSCOMMENT_STATE>\n {
@@ -362,7 +372,6 @@ int {
   row++;
   hasValue = false;
   BEGIN(0);
-  return IGNORE;
   }
 
 \/\* {
@@ -370,14 +379,12 @@ int {
   lastLength = yyleng;
   hasValue = false;
   BEGIN(COMMENT_STATE);
-  return IGNORE;
   }
 
 <COMMENT_STATE>. {
   column += lastLength;
   lastLength = yyleng;
   hasValue = false;
-  return IGNORE;
   }
 
 <COMMENT_STATE>\n    {
@@ -385,7 +392,6 @@ int {
   lastLength = 0;
   hasValue = false;
   row++;
-  return IGNORE;
   }
 
 <COMMENT_STATE>\*\/  {
@@ -393,7 +399,6 @@ int {
   lastLength = yyleng;
   hasValue = false;
   BEGIN(0);
-  return IGNORE;
   }
 
 %%

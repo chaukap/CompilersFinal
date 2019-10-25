@@ -5,7 +5,10 @@
 //
 // This header includes an emumerator for values returned from the lexer.
 
-enum token{
+#ifndef YYTOKENTYPE
+#define YYTOKENTYPE
+
+enum yytokentype {
   COMMA = 1,  // A single comma.
   DOT,        // A single period
   RPAREN,     // A right parenthesis
@@ -51,4 +54,6 @@ enum token{
   IGNORE,     // Means "ignore this lexeme it is useless".
 };
 
-char* tokenToString(token t);
+#endif
+
+char* tokenToString(yytokentype t);

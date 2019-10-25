@@ -5,24 +5,29 @@
 //
 // Driver for the compiler
 
-#include<FlexLexer.h>
-#include "tokens.hpp"
 #include<iostream>
+#include "node.hpp"
+#include "program3.tab.hpp"
+#include <FlexLexer.h>
 using std::cout;
 using std::endl;
 
 extern int row;
 extern int column;
 extern bool hasValue;
-int rtn;
-yyFlexLexer myScanner;
+
+Node *tree;
+yyFlexLexer scanner;
 
 int main()
 {
-  // Print Header
-  printf("Line\tColumn\tType\tValue\n");
+
+  yyparse();
+  cout << "PRINTING TREE\n" << endl;
+  tree->print(&cout);
+  cout << endl;
   
-  // Loop through the input file
+  /* // Loop through the input file
   while((rtn = myScanner.yylex()) > 0) {
     // White Space
     if (rtn == IGNORE) {
@@ -31,7 +36,7 @@ int main()
 
     // Over 20 errors
     } else if(rtn == ERRORS) {
-      cout << row << "\t" << column << "\t" << tokenToString((token) rtn);
+      cout << row << "\t" << column << "\t" << tokenToString((yytokentype) rtn);
       cout << endl;
 
       // I know, breaks are kind of lazy, but I like them.
@@ -39,13 +44,13 @@ int main()
             
     // If this is a valid symbols and there is a value associated
     } else if(hasValue) {
-      cout << row << "\t" << column << "\t" << tokenToString((token) rtn)
+      cout << row << "\t" << column << "\t" << tokenToString((yytokentype) rtn)
            << "\t" << myScanner.YYText() << endl;
 
     // All other symbols
     } else {
-      cout << row << "\t" << column << "\t" << tokenToString((token) rtn);
+      cout << row << "\t" << column << "\t" << tokenToString((yytokentype) rtn);
       cout << endl;
     }
-  }
+  } */
 }
