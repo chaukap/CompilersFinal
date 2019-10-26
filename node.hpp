@@ -102,6 +102,7 @@ class Node
     {
       if(left) left->print(out);
       *out << sval ;
+      cout << " ";
       if(right) right->print(out);
       //*out << endl;
       return;
@@ -160,6 +161,60 @@ class nodeParExp : public Node
       if(right) right->print(out);
       *out << " )" ;
       return;
+    }
+};
+
+class nodeComparatorExp : public Node
+{
+  public:
+    enum Comparator{
+      GT,
+      LT,
+      EQ,
+      NEQ,
+      GEQ,
+      LEQ
+    };
+
+    nodeComparatorExp(Comparator cp, Node* lf, Node*rt):Node(lf,rt)
+    {
+      myComparator = cp;
+    }
+
+    virtual void print(ostream* out = 0){
+      left->print(out);
+      *out << getComparatorString();
+      right->print(out);
+    }
+  
+  protected:
+    Comparator myComparator;
+
+  private:
+    string getComparatorString(){
+      switch (myComparator) {
+        case GT:
+          return " > ";
+          break;
+        case LT:
+          return " < ";
+          break;
+        case EQ:
+          return " == ";
+          break;
+        case NEQ:
+          return " != ";
+          break;
+        case GEQ:
+          return " >= ";
+          break;
+        case LEQ: 
+          return " <= ";
+          break;
+        default:
+          return "";
+          break;
+      }
     }
 };
 
