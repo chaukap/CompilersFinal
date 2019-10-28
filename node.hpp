@@ -1,20 +1,15 @@
-/*
+/* node.hpp
+ * Chandler Haukap
+ * Original author: kbuckner
+ * 10/25/19
+ * COSC 4785 
+ * 
+ * Original Node class written by Dr. Kim Buckner. Extended by Chandler
+ * Haukap.
+ *
  * This defines the "node" class in C++. Do not need this for C because 
  * just use the standard flex "yyxxxxx" variables/functions. 
  * The commented out portions are for debugging.
- *
- *
- *
- * $Author: kbuckner $
- * $Id: node.hpp,v 1.1 2017-10-04 13:20:53-06 kbuckner Exp kbuckner $
- * $Date: 2017-10-04 13:20:53-06 $
- *
- * $Log: node.hpp,v $
- * Revision 1.1  2017-10-04 13:20:53-06  kbuckner
- * Finally working version
- *
- *
- *
  */
 
 #ifndef NODE_HPP
@@ -164,6 +159,48 @@ class nodeParExp : public Node
     }
 };
 
+class nodeIdentifier : public Node
+{
+  public:
+    nodeIdentifier(string* name) : Node(0, 0)
+    {
+      identifier = *name;
+    }
+
+    nodeIdentifier(string name) : Node(0, 0)
+    {
+      identifier = name;
+    }
+
+    virtual void print(ostream* out = 0)
+    {
+      *out << identifier << " ";
+    }
+
+  protected:
+    string identifier;
+};
+
+class nodeVardec : public Node 
+{
+  public:
+    nodeVardec(Node* lf=0, Node* md=0, Node* rt=0) : Node(lf,rt)
+    {
+      middle = md;
+    }
+
+    virtual void print(ostream* out = 0)
+    {
+      if(left) left->print(out);
+      if(middle) middle->print(out);
+      if(right) right->print(out);
+      return;
+    }
+
+  protected:
+    Node* middle;
+};
+
 class nodeComparatorExp : public Node
 {
   public:
@@ -181,18 +218,22 @@ class nodeComparatorExp : public Node
       myComparator = cp;
     }
 
-    virtual void print(ostream* out = 0){
+    virtual void print(ostream* out = 0)
+    {
       left->print(out);
       *out << getComparatorString();
       right->print(out);
+      *out << " ";
     }
   
   protected:
     Comparator myComparator;
 
   private:
-    string getComparatorString(){
-      switch (myComparator) {
+    string getComparatorString()
+    {
+      switch (myComparator) 
+      {
         case GT:
           return " > ";
           break;
@@ -218,5 +259,80 @@ class nodeComparatorExp : public Node
     }
 };
 
+class nodeDot : public Node
+{
+  public:
+    nodeDot(Node* lf, Node* rt) : Node(lf,rt){}
+
+    virtual void print(ostream* out = 0)
+    {
+      left->print(out);
+      *out << ".";
+      right->print(out);
+    }
+};
+
+class nodeBracketExp : public Node
+{
+  public:
+    nodeBracketExp(Node* exp) : Node(exp, 0){}
+
+    virtual void print(ostream* out = 0)
+    {
+      *out << "[";
+      left->print();
+      *out << "]";
+      return;
+    }
+};
+
+class nodeNewExp : public Node
+{
+  public:
+    nodeNewExp(bool hasParens, Node* lf, Node* mid=0, Node* rt=0) : Node(lf,rt) 
+    {
+      middle = mid; 
+      parenthesis = hasParens;
+    }
+
+    virtual void print(ostream* out = 0)
+    {
+      *out << "new ";
+      left->print(out);
+      if(middle) middle->print(out);
+      if(right) right->print(out);
+      if(parenthesis) *out << "()";
+      return;
+    }
+
+  protected:
+    Node* middle;
+    bool parenthesis;
+};
+
+class nodeNot : public Node
+{
+  public:
+    nodeNot(Node* lf) : Node(lf){}
+
+    virtual void print(ostream* out)
+    {
+      *out << "!";
+      left->print(out);
+      return;
+    }
+};
+
+class nodeNameParen : public Node
+{
+  public:
+    nodeNameParen(Node* lf) : Node(lf){}
+
+    virtual void print(ostream* out)
+    {
+      left->print();
+      *out << "()";
+    }
+};
 
 #endif

@@ -1,7 +1,12 @@
+# Makefile
+# Chandler Haukap
+# 10/25/19
+# COSC 4785
+
 CXX=g++
 CXXFLAGS=-ggdb -std=c++11 -Wall
 YACC=bison
-YFLAGS=--report=state -W -d
+YFLAGS=--report=state -W -d -v
 LEX=flex
 LEXXX=flex++
 LFLAGS=--warn
@@ -22,6 +27,7 @@ clean :
 	/bin/rm -f program3
 	/bin/rm -f program3.tab.cpp
 	/bin/rm -f program3.tab.hpp
+	/bin/rm -f program3.output
 
 test : all
 	./program3 < testfile.txt

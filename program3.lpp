@@ -341,19 +341,21 @@ int {
   }
 
 <ERROR_STATE>.    {
+  cout << "Unknown character (" << yytext << ") at row " << row 
+       << ", column " << column << endl;
   column += lastLength;
   lastLength = yyleng;
   hasValue = true;
   BEGIN(0);
-  return ER_CH;
   }    
 
 <ERROR_STATE>.[a-zA-Z_][0-9a-zA-Z_]*   {
+  cout << "Unknown word (" << yytext << ") at row " << row
+       << ", column " << column << endl;
   column += lastLength;
   lastLength = yyleng;
   hasValue = true;
   BEGIN(0);
-  return ER_WD;
   }
 
 \/\/  {

@@ -1,13 +1,26 @@
+/* program3.ypp
+ * Chandler Haukap
+ * 10/24/19
+ * COSC 4785
+ *  
+ * Bison file. 
+ */
+
 %{
 #include <iostream>
 #include "node.hpp"
 #include <FlexLexer.h>
+#include <stack>
 using namespace std;
 
+extern stack<string> derivations;
 extern Node *tree;
 extern yyFlexLexer scanner;
+extern int row;
+extern int column;
 
 #define yylex() scanner.yylex()
+#define yytext() scanner.YYText()
 
 void yyerror(const char *);
 %}
@@ -16,8 +29,20 @@ void yyerror(const char *);
   Node *ttype;
 }
 
+%expect 15
+
 %type<ttype> program
 %type<ttype> exp
+%type<ttype> vardec
+%type<ttype> identifier
+%type<ttype> type
+%type<ttype> name
+%type<ttype> bracketexp
+%type<ttype> bracketexps
+%type<ttype> multibrackets
+%type<ttype> newexp
+%token INT
+%token IDENT
 %token<ttype> NUM
 %token COMMA
 %token DOT
@@ -27,24 +52,23 @@ void yyerror(const char *);
 %token RBRACK
 %token LBRACE
 %token RBRACE
-%token NEQ
-%token EQ
-%token LT
-%token GT
-%token LEQ
-%token GEQ
-%token AND
-%token OR
+%left NEQ
+%left EQ
+%left LT
+%left GT
+%left LEQ
+%left GEQ
+%left AND
+%left OR
 %token NOT
-%token PLUS
-%token MINUS
-%token TIMES
-%token DIV
-%token MOD
+%left PLUS
+%left MINUS
+%left TIMES
+%left DIV
+%left MOD
 %token SEMI
 %token ASSIGN
 %token COMMENT
-%token INT
 %token VOID
 %token CLASS
 %token NEW
@@ -56,7 +80,6 @@ void yyerror(const char *);
 %token THIS
 %token IF
 %token WHILE
-%token IDENT
 %token ER_CH
 %token ER_WD
 %token ERRORS
@@ -64,84 +87,280 @@ void yyerror(const char *);
 
 %% /* Grammar rules and actions follow. */
 input:  
-program             {
-                /* 
-                 * We have reached the end of the input and
-                 * now we are passing the results to the main function.
-                 */
+program         {
+                derivations.push("<input> --> <program>");
                 tree=$1;
-                // cout << "DONE: " << $1->getint() << endl;
                 }
 ;
 
 program:
-exp SEMI            {
+ program SEMI       {
+                    derivations.push("<program> --> <program> SEMI");
+                    }      
+| exp SEMI          {
+                    derivations.push("<program> --> <exp> SEMI");
                     $$=new Node($1);
                     }
+| vardec            {
+                    derivations.push("<program> --> <vardec>");
+                    $$=new nodeVardec($1);
+                    }
+| program vardec    {
+                    derivations.push("<program> --> <program> <vardec>");
+                    $$=new nodeVardec($1,$2);
+                    }
 | program exp SEMI  {
+                    derivations.push("<program> --> <program> <exp> SEMI");
                     $$=new Node($1,$2);
+                    }
+| error             {
+                    cout << "(R" << row << ",C" << column << ") " 
+                         << yytext() << endl;
                     }
 ;
 
+vardec:
+type identifier SEMI                  {
+                                      derivations.push("<vardec> --> <type> "
+                                                        "<identifier> SEMI");
+                                      $$=new nodeVardec($1, $2);
+                                      }
+| identifier identifier SEMI          {
+                                      derivations.push("<vardec> --> "
+                                                       "<identifier> "
+                                                       "<identifier> SEMI");
+                                      $$=new nodeVardec($1,$2);
+                                      }
+| type multibrackets identifier SEMI  {
+                                      derivations.push("<vardec> --> <type> "
+                                                       "<identifier> "
+                                                       "<multibrackets> "
+                                                       "<identifier> "
+                                                       "SEMI");
+                                      $$=new nodeVardec($1,$2,$3);
+                                      }
+| identifier multibrackets identifier SEMI {
+                                      derivations.push("<vardec> --> "
+                                                       "<identifier> "
+                                                       "<multibrackets> "
+                                                       "<identifier> "
+                                                       "SEMI");
+                                      $$=new nodeVardec($1,$2,$3);
+                                      }
+;
+
+type:
+INT             {
+                derivations.push("<type> --> int");
+                $$=new nodeIdentifier("int");
+                }
+;
+
+identifier:
+IDENT           {
+                derivations.push("IDENT --> " + string(yytext()));
+                derivations.push("<identifier> --> IDENT");
+                $$=new nodeIdentifier(yytext());
+                }
+;
+
+multibrackets:
+LBRACK RBRACK                 {
+                              derivations.push("<multibrackets> --> "
+                                               "LBRACK RBRACK");
+                              $$=new Node();
+                              $$->setval("[]");
+                              }
+| multibrackets LBRACK RBRACK {
+                              derivations.push("<multibrackets> --> "
+                                               "<multibrackets> LBRACK "
+                                               "RBRACK");
+                              $$=new Node($1);
+                              $$->setval("[]");
+                              }
+;
+
 exp:
-NUM 		        {       
+name            {
+                derivations.push("<exp> --> <name>");
+                $$=$1;
+                }
+| NULLT         {
+                derivations.push("<exp> --> NULLT");
+                $$=new Node();
+                $$->setval("NULL");
+                }
+| NUM 		      { 
+                derivations.push("NUM --> " + to_string($1->getint()));
+                derivations.push("<exp> --> NUM");
                 $$=new nodeNum($1->getint()); delete $1; 
                 }
+| name LPAREN RPAREN  {
+                      derivations.push("<exp> --> <name> LPAREN RPAREN");
+                      $$=new nodeNameParen($1);
+                      }
+| exp OR exp    {
+                derivations.push("<exp> --> <exp> OR <exp>");
+                $$=new Node($1,$3);
+                $$->setval(" || ");
+                }
+| exp AND exp   {
+                derivations.push("<exp> --> <exp> AND <exp>");
+                $$=new Node($1,$3);
+                $$->setval(" && ");
+                }
+| NOT exp       {
+                derivations.push("<exp> --> NOT <exp>");
+                $$=new nodeNot($2);
+                }
+| exp MOD exp   {
+                derivations.push("<exp> --> <exp> MOD <exp>");
+                $$=new Node($1,$3);
+                $$->setval(" % "); 
+                }
+| READ LPAREN RPAREN  {
+                      derivations.push("<exp> --> READ LPAREN RPAREN");
+                      $$=new Node();
+                      $$->setval("read ()");
+                      }
 | exp PLUS exp  { 
-                // cout << "e + e : ";
-                // cout << $1->getint() << " + " << $3->getint() << endl; 
+                derivations.push("<exp> --> <exp> PLUS <exp>");
                 $$=new Node($1,$3);
                 $$->setval(" + ");
                 }
 | exp MINUS exp { 
-                // cout << "e - e : ";
-                // cout << $1->getint() << " - " << $3->getint() << endl; 
+                derivations.push("<exp> --> <exp> MINUS <exp>"); 
                 $$=new Node($1,$3);
                 $$->setval(" - ");
                 }
 | exp TIMES exp { 
-                // cout << "e * e : ";
-                // cout << $1->getint() << " * " << $3->getint() << endl; 
+                derivations.push("<exp> --> <exp> TIMES <exp>");
                 $$=new Node($1,$3);
                 $$->setval(" * ");
                 }
 | exp DIV exp   { 
-                // cout << "e / e : ";
-                // cout << $1->getint() << " / " << $3->getint() << endl; 
+                derivations.push("<exp> --> <exp> DIV <exp>");
                 $$=new Node($1,$3);
                 $$->setval(" / ");
                 }
 | MINUS exp     { 
-                // cout << "- e : " << $2->getint() << endl;       
+                derivations.push("<exp> --> MINUS <exp>");      
                 $$=new nodeMinus($2);
                 }
 | LPAREN exp RPAREN { 
-                    // cout << "(e) :" << $2->getint() << endl;        
+                    derivations.push("<exp> --> LPAREN <exp> RPAREN");    
                     $$=new nodeParExp($2);
                     }
 | exp GT exp    {
+                derivations.push("<exp> --> <exp> GT <exp>");
                 $$=new nodeComparatorExp(
                   nodeComparatorExp::Comparator::GT, $1, $3);
                 }
 | exp LT exp    {
+                derivations.push("<exp> --> <exp> LT <exp>");
                 $$=new nodeComparatorExp(
                   nodeComparatorExp::Comparator::LT, $1, $3);
                 }
 | exp EQ exp    {
+                derivations.push("<exp> --> <exp> EQ <exp>");
                 $$=new nodeComparatorExp(
                   nodeComparatorExp::Comparator::EQ, $1, $3);
                 }
 | exp NEQ exp   {
+                derivations.push("<exp> --> <exp> NEQ <exp>");
                 $$=new nodeComparatorExp(
                   nodeComparatorExp::Comparator::NEQ, $1, $3);
                 }
 | exp LEQ exp   {
+                derivations.push("<exp> --> <exp> LEQ <exp>");
                 $$=new nodeComparatorExp(
                   nodeComparatorExp::Comparator::LEQ, $1, $3);
                 }
 | exp GEQ exp   {
+                derivations.push("<exp> --> <exp> GEQ <exp>");
                 $$=new nodeComparatorExp(
                   nodeComparatorExp::Comparator::GEQ, $1, $3);
                 }
+| newexp        {
+                derivations.push("<exp> --> <newexp>");
+                $$=$1;
+                }
+;
+
+newexp:
+NEW identifier LPAREN RPAREN  {
+                              derivations.push("<newexp> --> NEW "
+                                               "<identifier> LPAREN "
+                                               "RPAREN");
+                              $$=new nodeNewExp(true, $2);
+                              }
+| NEW type                    {
+                              derivations.push("<newexp> --> NEW <type>");
+                              $$=new nodeNewExp(false, $2);
+                              }
+| NEW type bracketexps        {
+                              derivations.push("<newexp> --> NEW <type> "
+                                               "<bracketexp>");
+                              $$=new nodeNewExp(false, $2, $3);
+                              }
+| NEW identifier bracketexps  {
+                              derivations.push("<newexp> --> NEW <identifier> "
+                                               "<bracketexps>");
+                              $$=new nodeNewExp(false, $2, $3);
+                              }
+| NEW type bracketexps multibrackets  {
+                                      derivations.push("<newexp> --> NEW "
+                                                       "<type> "
+                                                       "<bracketexps> "
+                                                       "<multibrackets>");
+                                      $$=new nodeNewExp(false, $2, $3, $4);
+                                      }
+| NEW identifier bracketexps multibrackets    {
+                                      derivations.push("<newexp> --> "
+                                                       "<identifier> "
+                                                       "<bracketexps> "
+                                                       "<multibrackets>");
+                                      $$=new nodeNewExp(false, $2, $3, $4);
+                                      }
+;
+
+name:
+THIS                  {
+                      derivations.push("<name> --> THIS");
+                      $$=new Node();
+                      $$->setval("this");
+                      }
+| identifier          {
+                      derivations.push("<name> --> <identifier>");
+                      $$=$1;
+                      }
+| name DOT identifier {
+                      derivations.push("<name> --> <name> DOT <identifier>");
+                      $$=new nodeDot($1,$3);
+                      }
+| name bracketexps    {
+                      derivations.push("<name> --> <name> <bracketexps>");
+                      $$=new Node($1,$2);
+                      }
+;
+
+bracketexps:
+bracketexp                {
+                          derivations.push("<bracketexps> --> <bracketexp>");
+                          $$=$1;
+                          }
+| bracketexps bracketexp  {
+                          derivations.push("<bracketexps> --> <bracketexps> "
+                                           "<bracketexp>");
+                          $$=new Node($1,$2);
+                          }
+;
+
+bracketexp:
+LBRACK exp RBRACK       {
+                        derivations.push("<bracketexp> --> LBRACK <exp> "
+                                         "RBRACK");
+                        $$=new nodeBracketExp($2);
+                        } 
 ;
 %%
