@@ -3,3 +3,8 @@ program
 a.out.dSYM/
 program1_lex.cpp
 program.dSYM/
+program4
+program4_lex.cpp
+program4.output
+program4.tab.cpp
+program4.tab.hpp
