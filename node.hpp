@@ -97,7 +97,6 @@ class Node
     {
       if(left) left->print(out);
       *out << sval ;
-      cout << " ";
       if(right) right->print(out);
       //*out << endl;
       return;

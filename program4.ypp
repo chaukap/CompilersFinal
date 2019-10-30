@@ -1,0 +1,285 @@
+/* program4.ypp
+ * Chandler Haukap
+ * 10/24/19
+ * COSC 4785
+ *  
+ * Bison file. 
+ */
+
+%{
+#include <iostream>
+#include "node.hpp"
+#include <FlexLexer.h>
+#include <queue>
+using namespace std;
+
+extern queue<Node*> tree;
+extern yyFlexLexer scanner;
+extern int row;
+extern int column;
+
+#define yylex() scanner.yylex()
+#define yytext() scanner.YYText()
+
+void yyerror(const char *);
+%}
+
+%union {
+  Node *ttype;
+}
+
+%expect 15
+
+%type<ttype> program
+%type<ttype> exp
+%type<ttype> vardec
+%type<ttype> identifier
+%type<ttype> type
+%type<ttype> name
+%type<ttype> bracketexp
+%type<ttype> bracketexps
+%type<ttype> multibrackets
+%type<ttype> newexp
+%token INT
+%token IDENT
+%token<ttype> NUM
+%token COMMA
+%token DOT
+%token RPAREN
+%token LPAREN
+%token LBRACK
+%token RBRACK
+%token LBRACE
+%token RBRACE
+%left NEQ
+%left EQ
+%left LT
+%left GT
+%left LEQ
+%left GEQ
+%left AND
+%left OR
+%token NOT
+%left PLUS
+%left MINUS
+%left TIMES
+%left DIV
+%left MOD
+%token SEMI
+%token ASSIGN
+%token COMMENT
+%token VOID
+%token CLASS
+%token NEW
+%token PRINT
+%token READ
+%token RETURN
+%token ELSE
+%token NULLT
+%token THIS
+%token IF
+%token WHILE
+%token ER_CH
+%token ER_WD
+%token ERRORS
+%token IGNORE
+
+%% /* Grammar rules and actions follow. */
+input:  
+program         {}
+;
+
+program:
+ program SEMI       {}      
+| exp SEMI          {
+                    tree.push($1);
+                    }
+| vardec            {
+                    tree.push($1);
+                    }
+| program vardec    {
+                    tree.push($2);
+                    }
+| program exp SEMI  {
+                    tree.push($2);
+                    }
+| error             {
+                    cout << "(R" << row << ",C" << column << ") " 
+                         << yytext() << endl;
+                    }
+;
+
+vardec:
+type identifier SEMI                  {
+                                      $$=new nodeVardec($1, $2);
+                                      }
+| identifier identifier SEMI          {
+                                      $$=new nodeVardec($1,$2);
+                                      }
+| type multibrackets identifier SEMI  {
+                                      $$=new nodeVardec($1,$2,$3);
+                                      }
+| identifier multibrackets identifier SEMI {
+                                      $$=new nodeVardec($1,$2,$3);
+                                      }
+;
+
+type:
+INT             {
+                $$=new nodeIdentifier("int");
+                }
+;
+
+identifier:
+IDENT           {
+                $$=new nodeIdentifier(yytext());
+                }
+;
+
+multibrackets:
+LBRACK RBRACK                 {
+                              $$=new Node();
+                              $$->setval("[]");
+                              }
+| multibrackets LBRACK RBRACK {
+                              $$=new Node($1);
+                              $$->setval("[]");
+                              }
+;
+
+exp:
+name            {
+                $$=$1;
+                }
+| NULLT         {
+                $$=new Node();
+                $$->setval("NULL");
+                }
+| NUM 		      {
+                $$=new nodeNum($1->getint()); delete $1; 
+                }
+| name LPAREN RPAREN  {
+                      $$=new nodeNameParen($1);
+                      }
+| exp OR exp    {
+                $$=new Node($1,$3);
+                $$->setval(" || ");
+                }
+| exp AND exp   {
+                $$=new Node($1,$3);
+                $$->setval(" && ");
+                }
+| NOT exp       {
+                $$=new nodeNot($2);
+                }
+| exp MOD exp   {
+                $$=new Node($1,$3);
+                $$->setval(" % "); 
+                }
+| READ LPAREN RPAREN  {
+                      $$=new Node();
+                      $$->setval("read ()");
+                      }
+| exp PLUS exp  { 
+                $$=new Node($1,$3);
+                $$->setval(" + ");
+                }
+| exp MINUS exp { 
+                $$=new Node($1,$3);
+                $$->setval(" - ");
+                }
+| exp TIMES exp { 
+                $$=new Node($1,$3);
+                $$->setval(" * ");
+                }
+| exp DIV exp   { 
+                $$=new Node($1,$3);
+                $$->setval(" / ");
+                }
+| MINUS exp     { 
+                $$=new nodeMinus($2);
+                }
+| LPAREN exp RPAREN { 
+                    $$=new nodeParExp($2);
+                    }
+| exp GT exp    {
+                $$=new nodeComparatorExp(
+                  nodeComparatorExp::Comparator::GT, $1, $3);
+                }
+| exp LT exp    {
+                $$=new nodeComparatorExp(
+                  nodeComparatorExp::Comparator::LT, $1, $3);
+                }
+| exp EQ exp    {
+                $$=new nodeComparatorExp(
+                  nodeComparatorExp::Comparator::EQ, $1, $3);
+                }
+| exp NEQ exp   {
+                $$=new nodeComparatorExp(
+                  nodeComparatorExp::Comparator::NEQ, $1, $3);
+                }
+| exp LEQ exp   {
+                $$=new nodeComparatorExp(
+                  nodeComparatorExp::Comparator::LEQ, $1, $3);
+                }
+| exp GEQ exp   {
+                $$=new nodeComparatorExp(
+                  nodeComparatorExp::Comparator::GEQ, $1, $3);
+                }
+| newexp        {
+                $$=$1;
+                }
+;
+
+newexp:
+NEW identifier LPAREN RPAREN  {
+                              $$=new nodeNewExp(true, $2);
+                              }
+| NEW type                    {
+                              $$=new nodeNewExp(false, $2);
+                              }
+| NEW type bracketexps        {
+                              $$=new nodeNewExp(false, $2, $3);
+                              }
+| NEW identifier bracketexps  {
+                              $$=new nodeNewExp(false, $2, $3);
+                              }
+| NEW type bracketexps multibrackets  {
+                                      $$=new nodeNewExp(false, $2, $3, $4);
+                                      }
+| NEW identifier bracketexps multibrackets    {
+                                      $$=new nodeNewExp(false, $2, $3, $4);
+                                      }
+;
+
+name:
+THIS                  {
+                      $$=new Node();
+                      $$->setval("this");
+                      }
+| identifier          {
+                      $$=$1;
+                      }
+| name DOT identifier {
+                      $$=new nodeDot($1,$3);
+                      }
+| name bracketexps    {
+                      $$=new Node($1,$2);
+                      }
+;
+
+bracketexps:
+bracketexp                {
+                          $$=$1;
+                          }
+| bracketexps bracketexp  {
+                          $$=new Node($1,$2);
+                          }
+;
+
+bracketexp:
+LBRACK exp RBRACK       {
+                        $$=new nodeBracketExp($2);
+                        } 
+;
+%%
