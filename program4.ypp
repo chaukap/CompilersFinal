@@ -13,7 +13,7 @@
 #include <queue>
 using namespace std;
 
-extern queue<Node*> tree;
+extern queue<Node*> classes;
 extern yyFlexLexer scanner;
 extern int row;
 extern int column;
@@ -28,61 +28,19 @@ void yyerror(const char *);
   Node *ttype;
 }
 
-%expect 15
-
-%type<ttype> program
-%type<ttype> exp
-%type<ttype> vardec
-%type<ttype> identifier
-%type<ttype> type
-%type<ttype> name
-%type<ttype> bracketexp
-%type<ttype> bracketexps
-%type<ttype> multibrackets
-%type<ttype> newexp
-%token INT
-%token IDENT
-%token<ttype> NUM
-%token COMMA
-%token DOT
-%token RPAREN
-%token LPAREN
-%token LBRACK
-%token RBRACK
-%token LBRACE
-%token RBRACE
-%left NEQ
-%left EQ
-%left LT
-%left GT
-%left LEQ
-%left GEQ
-%left AND
-%left OR
-%token NOT
-%left PLUS
-%left MINUS
-%left TIMES
-%left DIV
-%left MOD
-%token SEMI
-%token ASSIGN
-%token COMMENT
-%token VOID
-%token CLASS
-%token NEW
-%token PRINT
-%token READ
-%token RETURN
-%token ELSE
-%token NULLT
-%token THIS
-%token IF
-%token WHILE
-%token ER_CH
-%token ER_WD
-%token ERRORS
-%token IGNORE
+%type<ttype> program exp vardec type ResultType classDeclaration classBody
+%type<ttype> identifier name bracketexp bracketexps multibrackets newexp 
+%type<ttype> varDeclarations LocalVarDec ConstructorDeclarations
+%type<ttype> ConstructorDeclaration MethodDeclaration MethodDeclarations
+%type<ttype> LocalVarDecs Block Statement Statements ConditionalStatement
+%type<ttype> Arglist Parameter ParameterList OptionalExpression newType
+%type<ttype> identifierSemi paramList ParametersAndBlock InnerBlock
+%type<ttype> MoreParameters SimpleType UnaryOp
+%token<ttype> NUM SEMI
+%left NEQ EQ LT GT LEQ GEQ AND OR PLUS MINUS TIMES DIV MOD
+%token INT IDENT COMMA DOT RPAREN LPAREN LBRACK NOT RBRACK LBRACE RBRACE IF
+%token ASSIGN COMMENT VOID CLASS NEW PRINT READ RETURN ELSE NULLT THIS WHILE
+%token ER_CH ER_WD ERRORS IGNORE
 
 %% /* Grammar rules and actions follow. */
 input:  
@@ -90,118 +48,307 @@ program         {}
 ;
 
 program:
- program SEMI       {}      
-| exp SEMI          {
-                    tree.push($1);
-                    }
-| vardec            {
-                    tree.push($1);
-                    }
-| program vardec    {
-                    tree.push($2);
-                    }
-| program exp SEMI  {
-                    tree.push($2);
-                    }
-| error             {
-                    cout << "(R" << row << ",C" << column << ") " 
-                         << yytext() << endl;
-                    }
+classDeclaration            {
+                            classes.push($1);
+                            }      
+| program classDeclaration  {
+                            classes.push($2);
+                            }
+| error                     {
+                            cout << "(R" << row << ",C" << column << ") " 
+                                 << yytext() << endl;
+                            }
+;
+
+classDeclaration:
+CLASS identifier LBRACE classBody RBRACE  {
+                                          $$=new NodeClass($2, $4);
+                                          }
+| CLASS identifier LBRACE RBRACE          {
+                                          $$=new NodeClass($2, 0);
+                                          }
+;
+
+classBody:
+varDeclarations ConstructorDeclarations MethodDeclarations  {
+                                                            $$=new NodeClassBody($1, 
+                                                                            $2, $3);
+                                                            }
+| varDeclarations                             {
+                                              $$=new NodeClassBody($1);
+                                              }
+| varDeclarations ConstructorDeclarations     {
+                                              $$=new NodeClassBody($1, $2);
+                                              }
+| ConstructorDeclarations                     {
+                                              $$=new NodeClassBody(0, $1);
+                                              }
+| ConstructorDeclarations MethodDeclarations  {
+                                              $$=new NodeClassBody(0, $1, $2);
+                                              }
+| MethodDeclarations                          {
+                                              $$=new NodeClassBody(0, 0, $1);
+                                              }
+| varDeclarations MethodDeclarations          {
+                                              $$=new NodeClassBody($1, 0, $2);
+                                              }
+;
+
+varDeclarations:
+vardec                    {
+                          $$=$1;
+                          }
+| varDeclarations vardec  {
+                          $$=new Node($1, $2);
+                          }
+;
+
+ConstructorDeclarations:
+ConstructorDeclaration                            {
+                                                  $$=$1;
+                                                  }  
+| ConstructorDeclarations ConstructorDeclaration  {
+                                                  $$=new Node($1, $2);
+                                                  }
+;
+
+ConstructorDeclaration:
+identifier LPAREN ParametersAndBlock  {
+                                      //cout << "Constructor Declaration" << endl;
+                                      $$=new NodeConstructorDec($1, $3);
+                                      }
+;
+
+MethodDeclarations:
+MethodDeclaration                     {
+                                      $$=new Node($1);
+                                      }
+| MethodDeclarations MethodDeclaration  {
+                                      $$=new Node($1, $2);
+                                      }
+;
+
+MethodDeclaration:
+ResultType identifier LPAREN ParametersAndBlock {
+                                                $$=new NodeMethodDec($1, $2, $4);
+                                                }
+;
+
+/* Returns a regular node. If LEFT is NULL, there is no parameter list. */
+ParametersAndBlock:
+ParameterList RPAREN Block  {
+                            $$=new Node($1, $3);
+                            }
+| RPAREN Block              {
+                            $$=new Node(0, $2);
+                            }
+;
+
+ResultType:
+type    {
+        $$=$1;
+        }
+| VOID    {
+        $$=0;
+        }
+;
+
+ParameterList:
+Parameter                         {
+                                  $$=$1;
+                                  }
+| Parameter MoreParameters        {
+                                  $$=new NodeParameterList($1, $2);
+                                  }
+;
+
+MoreParameters:
+COMMA Parameter                   {
+                                  $$=$2;
+                                  }
+| COMMA Parameter MoreParameters  {
+                                  $$=new NodeParameterList($2, $3);
+                                  }
+;
+
+Parameter:
+type identifier {
+                $$=new NodeParameter($1, $2);
+                }
 ;
 
 vardec:
 type identifier SEMI                  {
                                       $$=new nodeVardec($1, $2);
                                       }
-| identifier identifier SEMI          {
+| identifier identifierSemi           {
                                       $$=new nodeVardec($1,$2);
                                       }
-| type multibrackets identifier SEMI  {
+| type multibrackets identifierSemi   {
                                       $$=new nodeVardec($1,$2,$3);
                                       }
-| identifier multibrackets identifier SEMI {
-                                      $$=new nodeVardec($1,$2,$3);
-                                      }
+| identifier multibrackets identifierSemi {
+                                          $$=new nodeVardec($1,$2,$3);
+                                          }
 ;
 
-type:
-INT             {
-                $$=new nodeIdentifier("int");
-                }
+identifierSemi:
+identifier SEMI   {
+                  $$=$1;
+                  }
 ;
 
-identifier:
-IDENT           {
-                $$=new nodeIdentifier(yytext());
-                }
+Block:
+LBRACE InnerBlock RBRACE  {
+                          $$=new NodeBlock($2);
+                          }
+| LBRACE RBRACE             {
+                          $$=0;
+                          }
 ;
 
-multibrackets:
-LBRACK RBRACK                 {
-                              $$=new Node();
-                              $$->setval("[]");
-                              }
-| multibrackets LBRACK RBRACK {
-                              $$=new Node($1);
-                              $$->setval("[]");
-                              }
+/* Returns a Node. LEFT is the LocalVarDecs and RIGHT is the Statements.
+ * Either or could be NULL. */
+InnerBlock:
+LocalVarDecs              {
+                          $$=new Node($1);
+                          }
+| Statements              {
+                          $$=new Node(0, $1);
+                          }
+| LocalVarDecs Statements {
+                          $$=new Node($1, $2);
+                          }
+;
+
+LocalVarDecs:
+LocalVarDec                 {
+                            $$=$1;
+                            }
+| LocalVarDecs LocalVarDec  {
+                            $$=new Node($1, $2);
+                            }
+;
+
+Statements:
+Statement             {
+                      $$=$1;
+                      }
+| Statements Statement  {
+                      $$=new Node($1, $2);
+                      }
+;
+
+Statement:
+name ASSIGN exp SEMI                {
+                                    $$=new NodeAssign($1, $3);
+                                    }
+| name paramList SEMI               {
+                                    $$=new NodeFunct($1, $2);
+                                    }
+| PRINT paramList SEMI              {
+                                    $$=new NodePrint($2);
+                                    }
+| ConditionalStatement              {
+                                    $$=$1;
+                                    }
+| WHILE LPAREN exp RPAREN Statement {
+                                    $$=new NodeWhile($3, $5);
+                                    }
+| RETURN OptionalExpression         {
+                                    $$=new NodeOptional($2);
+                                    }
+| Block                             {
+                                    $$=$1;
+                                    }
+| SEMI
+;
+
+
+LocalVarDec:
+type identifier SEMI  {
+                      $$=new nodeVardec($1, $2);
+                      }
+;
+
+Arglist:
+exp                 {
+                    $$=$1;
+                    }
+| Arglist COMMA exp {
+                    $$=new Node($1, $3);
+                    }
+;
+
+OptionalExpression:
+SEMI        {
+            $$=0;
+            }
+| exp SEMI  {
+            $$=$1;
+            }
+;
+
+ConditionalStatement:
+IF LPAREN exp RPAREN Statement  {
+                                $$=new NodeConditional($3, $5, 0);
+                                }
+| IF LPAREN exp RPAREN Statement ELSE Statement {
+                                                $$=new NodeConditional($3, $5, 
+                                                                       $7);
+                                                }
 ;
 
 exp:
-name            {
-                $$=$1;
-                }
-| NULLT         {
-                $$=new Node();
-                $$->setval("NULL");
-                }
-| NUM 		      {
-                $$=new nodeNum($1->getint()); delete $1; 
-                }
-| name LPAREN RPAREN  {
-                      $$=new nodeNameParen($1);
+name                  {
+                      $$=$1;
                       }
-| exp OR exp    {
-                $$=new Node($1,$3);
-                $$->setval(" || ");
-                }
-| exp AND exp   {
-                $$=new Node($1,$3);
-                $$->setval(" && ");
-                }
-| NOT exp       {
-                $$=new nodeNot($2);
-                }
-| exp MOD exp   {
-                $$=new Node($1,$3);
-                $$->setval(" % "); 
-                }
+| NULLT               {
+                      $$=0;
+                      }
+| NUM       		      {
+                      $$=new nodeNum($1->getint()); delete $1; 
+                      }
+| name paramList      {
+                      $$=new NodeFunctionCall($1, $2);
+                      }
+| exp OR exp          {
+                      $$=new Node($1,$3);
+                      $$->setval(" || ");
+                      }
+| exp AND exp         {
+                      $$=new Node($1,$3);
+                      $$->setval(" && ");
+                      }
+| exp MOD exp         {
+                      $$=new Node($1,$3);
+                      $$->setval(" % "); 
+                      }
 | READ LPAREN RPAREN  {
-                      $$=new Node();
-                      $$->setval("read ()");
+                      $$=new NodeRead();
                       }
-| exp PLUS exp  { 
-                $$=new Node($1,$3);
-                $$->setval(" + ");
-                }
-| exp MINUS exp { 
-                $$=new Node($1,$3);
-                $$->setval(" - ");
-                }
-| exp TIMES exp { 
-                $$=new Node($1,$3);
-                $$->setval(" * ");
-                }
-| exp DIV exp   { 
-                $$=new Node($1,$3);
-                $$->setval(" / ");
-                }
-| MINUS exp     { 
-                $$=new nodeMinus($2);
-                }
-| LPAREN exp RPAREN { 
-                    $$=new nodeParExp($2);
-                    }
+| exp PLUS exp        { 
+                      $$=new Node($1,$3);
+                      $$->setval(" + ");
+                      }
+| exp MINUS exp       { 
+                      $$=new Node($1,$3);
+                      $$->setval(" - ");
+                      }
+| exp TIMES exp       { 
+                      $$=new Node($1,$3);
+                      $$->setval(" * ");
+                      }
+| exp DIV exp         { 
+                      $$=new Node($1,$3);
+                      $$->setval(" / ");
+                      }
+| UnaryOp             { 
+                      $$=$1;
+                      }
+| LPAREN exp RPAREN   { 
+                      $$=new nodeParExp($2);
+                      }
 | exp GT exp    {
                 $$=new nodeComparatorExp(
                   nodeComparatorExp::Comparator::GT, $1, $3);
@@ -232,30 +379,50 @@ name            {
 ;
 
 newexp:
-NEW identifier LPAREN RPAREN  {
-                              $$=new nodeNewExp(true, $2);
-                              }
-| NEW type                    {
-                              $$=new nodeNewExp(false, $2);
-                              }
-| NEW type bracketexps        {
-                              $$=new nodeNewExp(false, $2, $3);
-                              }
-| NEW identifier bracketexps  {
-                              $$=new nodeNewExp(false, $2, $3);
-                              }
-| NEW type bracketexps multibrackets  {
-                                      $$=new nodeNewExp(false, $2, $3, $4);
+NEW identifier paramList              {
+                                      $$=new nodeNewExp($2, $3, 0);
                                       }
-| NEW identifier bracketexps multibrackets    {
-                                      $$=new nodeNewExp(false, $2, $3, $4);
+| newType bracketexps multibrackets   {
+                                      $$=new nodeNewExp($1, $2, $3);
                                       }
+| newType bracketexps                 {
+                                      $$=new nodeNewExp($1, $2);
+                                      }
+| newType multibrackets               {
+                                      $$=new nodeNewExp($1, 0, $2);
+                                      }
+;
+
+UnaryOp:
+MINUS exp   {
+            $$=new NodeNegative($2);
+            }
+| PLUS exp  {
+            $$=new NodePositive($2);
+            }
+| NOT exp   {
+            $$=new NodeNot($2);
+            }
+;
+
+paramList:
+LPAREN RPAREN           {
+                        $$=new NodeParamList(0);
+                        }
+| LPAREN Arglist RPAREN {
+                        $$=new NodeParamList($2);
+                        }
+;
+
+newType:
+NEW SimpleType      {
+                    $$=$2;
+                    }
 ;
 
 name:
 THIS                  {
-                      $$=new Node();
-                      $$->setval("this");
+                      $$=new NodeThis();
                       }
 | identifier          {
                       $$=$1;
@@ -281,5 +448,38 @@ bracketexp:
 LBRACK exp RBRACK       {
                         $$=new nodeBracketExp($2);
                         } 
+;
+
+multibrackets:
+LBRACK RBRACK                 {
+                              $$=new NodeEmptyBrackets();
+                              }
+| multibrackets LBRACK RBRACK {
+                              $$=new NodeEmptyBrackets($1);
+                              }
+;
+
+type:
+SimpleType            {
+                      $$=$1;
+                      }
+| type LBRACK RBRACK  {
+                      $$=new NodeTypeBracket($1);
+                      }
+;
+
+SimpleType:
+INT           {
+              $$=new NodeSimpleType();
+              }
+| identifier  {
+              $$=$1;
+              }
+;
+
+identifier:
+IDENT           {
+                $$=new NodeIdentifier(yytext());
+                }
 ;
 %%

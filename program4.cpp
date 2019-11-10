@@ -18,24 +18,20 @@ extern int row;
 extern int column;
 extern bool hasValue;
 
-queue<Node*> tree;
+queue<Node*> classes;
 yyFlexLexer scanner;
 
 int main()
 {
-  cout << "----------- ERRORS -------------" << endl;
-
   yyparse();
 
-  cout << endl << endl << "--------- PARSE TREE -----------" << endl;
+  cout << endl << endl;
   
   Node* top;
-  while(!tree.empty()){
-    top = tree.front();
+  while(!classes.empty()){
+    top = classes.front();
     top->print(&cout);
     cout << endl;
-    tree.pop();
+    classes.pop();
   }
-  //cout << "PRINTING TREE\n" << endl;
-  //tree->print(&cout);
 }

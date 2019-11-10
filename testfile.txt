@@ -1,6 +1,9 @@
-f(ads@f)
-int x;;
-new y[3];
-^$;
-x[][] a;
-null;
+class testy2
+{
+    int y;
+
+    testy2(int a, int b) {
+        while(n > 9) print(asdf);
+        
+    }
+}

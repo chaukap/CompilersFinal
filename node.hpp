@@ -96,7 +96,6 @@ class Node
     virtual void print(ostream *out = 0)
     {
       if(left) left->print(out);
-      *out << sval ;
       if(right) right->print(out);
       //*out << endl;
       return;
@@ -112,10 +111,10 @@ class Node
     Node *left,*right;
 };
 
-class nodeMinus : public Node
+class NodeNegative : public Node
 {
   public:
-    nodeMinus(Node *lf=0,Node *rt=0):Node(lf,rt){}
+    NodeNegative(Node *lf):Node(lf){}
 
     virtual void print(ostream *out = 0)
     {
@@ -123,9 +122,20 @@ class nodeMinus : public Node
         *out << "-";
         left->print(out);
       }
-      //*out << endl;
       return;
     }
+};
+
+class NodePositive : public Node
+{
+  public:
+   NodePositive(Node* lf) : Node(lf) {}
+
+   virtual void print(ostream* out)
+   {
+     *out << "+";
+     left->print(out);
+   }
 };
 
 class nodeNum : public Node
@@ -138,8 +148,7 @@ class nodeNum : public Node
 
     virtual void print(ostream *out = 0)
     {
-      *out << ival;
-      return;
+      *out << " " << ival;
     }
 };
 
@@ -150,30 +159,31 @@ class nodeParExp : public Node
 
     virtual void print(ostream *out = 0)
     {
+      *out << "Parameter expression;" << endl;
       *out << "( ";
       if(left) left->print(out);
       if(right) right->print(out);
       *out << " )" ;
-      return;
+      *out << "END parameter expression" << endl;
     }
 };
 
-class nodeIdentifier : public Node
+class NodeIdentifier : public Node
 {
   public:
-    nodeIdentifier(string* name) : Node(0, 0)
+    NodeIdentifier(string* name) : Node(0, 0)
     {
       identifier = *name;
     }
 
-    nodeIdentifier(string name) : Node(0, 0)
+    NodeIdentifier(string name) : Node(0, 0)
     {
       identifier = name;
     }
 
     virtual void print(ostream* out = 0)
     {
-      *out << identifier << " ";
+      *out << " " << identifier;
     }
 
   protected:
@@ -190,14 +200,27 @@ class nodeVardec : public Node
 
     virtual void print(ostream* out = 0)
     {
+      *out << "Vardec:" << endl;
       if(left) left->print(out);
       if(middle) middle->print(out);
       if(right) right->print(out);
-      return;
+      *out << endl << "END vardec" << endl;
     }
 
   protected:
     Node* middle;
+};
+
+class NodeEmptyBrackets : public Node
+{
+  public:
+    NodeEmptyBrackets(Node* moreBrackets=0) : Node(moreBrackets) {}
+
+    virtual void print(ostream* out)
+    {
+      if(left) left->print(out);
+      *out << "[]";
+    }
 };
 
 class nodeComparatorExp : public Node
@@ -219,9 +242,9 @@ class nodeComparatorExp : public Node
 
     virtual void print(ostream* out = 0)
     {
-      left->print(out);
+      if(left) left->print(out);
       *out << getComparatorString();
-      right->print(out);
+      if(right) right->print(out);
       *out << " ";
     }
   
@@ -265,9 +288,9 @@ class nodeDot : public Node
 
     virtual void print(ostream* out = 0)
     {
-      left->print(out);
+      if(left) left->print(out);
       *out << ".";
-      right->print(out);
+      if(right) right->print(out);
     }
 };
 
@@ -279,7 +302,7 @@ class nodeBracketExp : public Node
     virtual void print(ostream* out = 0)
     {
       *out << "[";
-      left->print();
+      if(left) left->print(out);
       *out << "]";
       return;
     }
@@ -288,49 +311,333 @@ class nodeBracketExp : public Node
 class nodeNewExp : public Node
 {
   public:
-    nodeNewExp(bool hasParens, Node* lf, Node* mid=0, Node* rt=0) : Node(lf,rt) 
+    nodeNewExp(Node* lf, Node* mid=0, Node* rt=0) : Node(lf,rt) 
     {
       middle = mid; 
-      parenthesis = hasParens;
     }
 
     virtual void print(ostream* out = 0)
     {
       *out << "new ";
-      left->print(out);
+      if(left) left->print(out);
       if(middle) middle->print(out);
       if(right) right->print(out);
-      if(parenthesis) *out << "()";
+      *out << endl;
       return;
     }
 
   protected:
     Node* middle;
-    bool parenthesis;
 };
 
-class nodeNot : public Node
+class NodeNot : public Node
 {
   public:
-    nodeNot(Node* lf) : Node(lf){}
+    NodeNot(Node* lf) : Node(lf){}
 
     virtual void print(ostream* out)
     {
       *out << "!";
-      left->print(out);
+      if(left) left->print(out);
       return;
     }
 };
 
-class nodeNameParen : public Node
+class NodeFunctionCall : public Node
 {
   public:
-    nodeNameParen(Node* lf) : Node(lf){}
+    NodeFunctionCall(Node* name, Node* params) : Node(name, params){}
 
     virtual void print(ostream* out)
     {
-      left->print();
-      *out << "()";
+      if(left) left->print(out);
+      *out << "( ";
+      if(right) right->print(out);
+      *out << " )" << endl;
+    }
+};
+
+class NodeClass : public Node
+{
+  public:
+    NodeClass(Node* lf, Node* rt) : Node(lf, rt){}
+
+    virtual void print(ostream* out)
+    {
+      *out << "Class:" << endl;
+      if(left) left->print(out);
+      if(right) right->print(out);
+      *out << "END class" << endl;
+    }
+};
+
+class NodeClassBody : public Node
+{
+  public: 
+    NodeClassBody(Node* lf=0, Node* md=0, Node* rt=0) : Node(lf, rt) 
+    {
+      middle = md;
+    }
+
+    virtual void print(ostream* out)
+    {
+      *out << "Class body:" << endl;
+      if(left) left->print(out);
+      if(middle) middle->print(out);
+      if(right) right->print(out);
+      *out << "END Class body" << endl;
+    }
+
+  protected:
+    Node* middle;
+};
+
+class NodeSimpleType : public Node
+{
+  public:
+    NodeSimpleType() {}
+
+    virtual void print(ostream* out)
+    {
+      *out << "int ";
+    }
+};
+
+class NodeTypeBracket : public Node
+{
+  public:
+    NodeTypeBracket(Node* type) : Node(type) {}
+
+    virtual void print(ostream* out)
+    {
+      left->print(out);
+      *out << "[]";
+    }
+};
+
+class NodeConstructorDec : public Node
+{
+  public:
+    NodeConstructorDec(Node* lf=0, Node* rt=0) : Node(lf, rt) {}
+
+    virtual void print(ostream* out)
+    {
+      *out << "Constructor Declaration:" << endl;
+      if(left) left->print(out);
+      *out << endl;
+      if(right) right->print(out);
+      *out << "END Constructor Declaration" << endl;
+    }
+};
+
+class NodeMethodDec : public Node
+{
+  public:
+    NodeMethodDec(Node* lf=0, Node* md=0, Node* rt=0) : Node(lf, rt)
+    {
+      middle = md;
+    }
+
+    virtual void print(ostream* out)
+    {
+      *out << "Method Declaration:" << endl;
+      if(left) left->print(out);
+      if(middle) middle->print(out);
+      if(right) right->print(out);
+      *out << "END Method Declaration" << endl;
+    }
+
+  protected:
+    Node* middle;
+};
+
+class NodeParameterList : public Node
+{
+  public: 
+    NodeParameterList(Node* lf=0, Node* rt=0) : Node(lf, rt) {}
+
+    virtual void print(ostream* out)
+    {
+      *out << "Parameter List:" << endl;
+      if(left) left->print(out);
+      if(right) right->print(out);
+      *out << "END Parameter List" << endl;
+    }
+};
+
+class NodeParameter : public Node
+{
+  public:
+    NodeParameter(Node* lf, Node* rt) : Node(lf, rt) {}
+
+    virtual void print(ostream* out)
+    {
+      *out << "Parameter:" << endl;
+      if(left) left->print(out);
+      if(right) right->print(out);
+      *out << endl << "END Parameter" << endl;
+    }
+};
+
+class NodeBlock : public Node
+{
+  public: 
+    NodeBlock(Node* block) : Node(block){}
+
+    virtual void print(ostream* out)
+    {
+      *out << "Block:" << endl;
+      if(left) left->print(out);
+      *out << "END block" << endl;
+    }
+};
+
+class NodeAssign : public Node
+{
+  public:
+    NodeAssign(Node* lf, Node* rt) : Node(lf, rt) {}
+
+    virtual void print(ostream* out)
+    {
+      *out << "Assignment" << endl;
+      if(left) left->print(out);
+      *out << " = ";
+      if(right) {
+        right->print(out);
+      } else {
+        *out << "null" << endl;
+      }
+      *out << endl << "END assignment" << endl;
+    }
+};
+
+class NodeParamList : public Node
+{
+  public: 
+    NodeParamList(Node* params) : Node(params) {}
+
+    virtual void print(ostream* out)
+    {
+      if(left) {
+        left->print(out);
+      } else {
+        *out << "void";
+      }
+    }
+};
+
+class NodePrint : public Node
+{
+  public:
+    NodePrint(Node* exp) : Node(exp) {}
+
+    virtual void print(ostream* out)
+    {
+      *out << "Print" << endl;
+      if(left) left->print(out);
+      *out << "END print" << endl;
+    }
+};
+
+class NodeRead : public Node
+{
+  public:
+    NodeRead() : Node() {}
+
+    virtual void print(ostream *out)
+    {
+      *out << "read()" << endl;
+    }
+};
+
+class NodeFunct : public Node
+{
+  public:
+    NodeFunct(Node* name, Node* paramList) : Node(name, paramList) {}
+
+    virtual void print(ostream* out)
+    {
+      *out << "Function Declaration:" << endl;
+      if(left) left->print(out);
+      *out << "END function declaration" << endl;
+    }
+};
+
+class NodeWhile : public Node
+{
+  public:
+    NodeWhile(Node* exp, Node* statement) : Node(exp, statement) {}
+
+    virtual void print(ostream* out)
+    {
+      *out << "While:" << endl;
+      if(left) left->print(out);
+      if(right) right->print(out);
+      *out << "END while" << endl;
+    }
+};
+
+class NodeConditional : public Node
+{
+  public:
+    NodeConditional(Node* cond, Node* thn, Node* els=0) : Node(cond, thn) 
+    {
+      optionalElse = els;
+    }
+
+    virtual void print(ostream* out)
+    {
+      *out << "If:" << endl;
+      if(left) left->print(out);
+      *out << "Then:" << endl;
+      if(right) right->print(out);
+      if(optionalElse){
+        *out << "Else:" << endl;
+        optionalElse->print(out);
+      }
+      *out << "END if" << endl;
+    }
+  
+  protected:
+    Node* optionalElse;
+};
+
+class NodeOptional : public Node
+{
+  public:
+    NodeOptional(Node* opt) : Node(opt) {}
+
+    virtual void print(ostream* out)
+    {
+      *out << "Option:" << endl;
+      if(left) {
+        if(left) left->print(out);
+      } else {
+        *out << "void" << endl;
+      }
+      *out << "END option:" << endl;
+    }
+};
+
+class NodeEmptyParam : public Node
+{
+  public:
+    NodeEmptyParam() : Node() {}
+
+    virtual void print(ostream* out)
+    {
+      *out << "void" << endl;
+    }
+};
+
+class NodeThis : public Node
+{
+  public:
+    NodeThis() : Node() {}
+
+    virtual void print(ostream* out)
+    {
+      *out << " this";
     }
 };
 
