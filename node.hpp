@@ -93,13 +93,19 @@ class Node
       return right;
     }
 
-    virtual void print(ostream *out = 0)
-    {
+    virtual void print(ostream *out = 0){
       if(left) left->print(out);
       if(right) right->print(out);
+    }
+
+    virtual void prettyPrint(ostream *out = 0)
+    {
+      if(left) left->prettyPrint(out);
+      if(right) right->prettyPrint(out);
       //*out << endl;
       return;
     }
+
   protected:
     int yyline;
     int yycol;
@@ -111,16 +117,41 @@ class Node
     Node *left,*right;
 };
 
+/* A class for errors. This class does NOTHING.
+ * It exists to prevent segmentation faults in the 
+ * event that an error production occurred in the middle
+ * of valid code. */
+class NodeError : public Node
+{
+  public:
+    NodeError() : Node() {}
+
+    virtual void print(ostream* out)
+    {
+      return;
+    }
+
+    virtual void prettyPrint(ostream* out)
+    {
+      return;
+    }
+};
+
 class NodeNegative : public Node
 {
   public:
     NodeNegative(Node *lf):Node(lf){}
 
-    virtual void print(ostream *out = 0)
+    virtual void print(ostream* out)
+    {
+      *out << "<UnaryOP> --> MINUS <expression>" << endl;
+    }
+
+    virtual void prettyPrint(ostream *out = 0)
     {
       if(left) {
         *out << "-";
-        left->print(out);
+        left->prettyPrint(out);
       }
       return;
     }
@@ -131,10 +162,15 @@ class NodePositive : public Node
   public:
    NodePositive(Node* lf) : Node(lf) {}
 
-   virtual void print(ostream* out)
+    virtual void print(ostream* out)
+    {
+      *out << "<UnaryOP> -> PLUS <expression>" << endl;
+    }
+
+   virtual void prettyPrint(ostream* out)
    {
      *out << "+";
-     left->print(out);
+     left->prettyPrint(out);
    }
 };
 
@@ -146,7 +182,13 @@ class nodeNum : public Node
       ival=i;
     };
 
-    virtual void print(ostream *out = 0)
+    virtual void print(ostream* out)
+    {
+      *out << "<expression> --> NUM" << endl;
+      *out << "NUM --> " << ival << endl;
+    }
+
+    virtual void prettyPrint(ostream *out = 0)
     {
       *out << " " << ival;
     }
@@ -155,14 +197,20 @@ class nodeNum : public Node
 class nodeParExp : public Node
 {
   public:
-    nodeParExp(Node *lf=0,Node *rt=0):Node(lf,rt){}
+    nodeParExp(Node *lf=0) : Node(lf) {}
 
-    virtual void print(ostream *out = 0)
+    virtual void print(ostream* out)
+    {
+      *out << "<expression> --> LPAREN <expression> RPAREN" << endl;
+      if(left) left->print(out);
+    }
+
+    virtual void prettyPrint(ostream *out = 0)
     {
       *out << "Parameter expression;" << endl;
       *out << "( ";
-      if(left) left->print(out);
-      if(right) right->print(out);
+      if(left) left->prettyPrint(out);
+      if(right) right->prettyPrint(out);
       *out << " )" ;
       *out << "END parameter expression" << endl;
     }
@@ -181,7 +229,13 @@ class NodeIdentifier : public Node
       identifier = name;
     }
 
-    virtual void print(ostream* out = 0)
+    virtual void print(ostream* out)
+    {
+      *out << "<identifier> --> IDENT" << endl;
+      *out << "IDENT --> " << identifier << endl;
+    }
+
+    virtual void prettyPrint(ostream* out = 0)
     {
       *out << " " << identifier;
     }
@@ -198,12 +252,18 @@ class nodeVardec : public Node
       middle = md;
     }
 
-    virtual void print(ostream* out = 0)
+    virtual void print(ostream* out)
+    {
+      *out << "<Variable Declaration>" << endl;
+      *out << "<Variable Declaration> --> ";
+    }
+
+    virtual void prettyPrint(ostream* out = 0)
     {
       *out << "Vardec:" << endl;
-      if(left) left->print(out);
-      if(middle) middle->print(out);
-      if(right) right->print(out);
+      if(left) left->prettyPrint(out);
+      if(middle) middle->prettyPrint(out);
+      if(right) right->prettyPrint(out);
       *out << endl << "END vardec" << endl;
     }
 
@@ -216,9 +276,9 @@ class NodeEmptyBrackets : public Node
   public:
     NodeEmptyBrackets(Node* moreBrackets=0) : Node(moreBrackets) {}
 
-    virtual void print(ostream* out)
+    virtual void prettyPrint(ostream* out)
     {
-      if(left) left->print(out);
+      if(left) left->prettyPrint(out);
       *out << "[]";
     }
 };
@@ -240,11 +300,11 @@ class nodeComparatorExp : public Node
       myComparator = cp;
     }
 
-    virtual void print(ostream* out = 0)
+    virtual void prettyPrint(ostream* out = 0)
     {
-      if(left) left->print(out);
+      if(left) left->prettyPrint(out);
       *out << getComparatorString();
-      if(right) right->print(out);
+      if(right) right->prettyPrint(out);
       *out << " ";
     }
   
@@ -286,11 +346,11 @@ class nodeDot : public Node
   public:
     nodeDot(Node* lf, Node* rt) : Node(lf,rt){}
 
-    virtual void print(ostream* out = 0)
+    virtual void prettyPrint(ostream* out = 0)
     {
-      if(left) left->print(out);
+      if(left) left->prettyPrint(out);
       *out << ".";
-      if(right) right->print(out);
+      if(right) right->prettyPrint(out);
     }
 };
 
@@ -299,10 +359,10 @@ class nodeBracketExp : public Node
   public:
     nodeBracketExp(Node* exp) : Node(exp, 0){}
 
-    virtual void print(ostream* out = 0)
+    virtual void prettyPrint(ostream* out = 0)
     {
       *out << "[";
-      if(left) left->print(out);
+      if(left) left->prettyPrint(out);
       *out << "]";
       return;
     }
@@ -316,12 +376,12 @@ class nodeNewExp : public Node
       middle = mid; 
     }
 
-    virtual void print(ostream* out = 0)
+    virtual void prettyPrint(ostream* out = 0)
     {
       *out << "new ";
-      if(left) left->print(out);
-      if(middle) middle->print(out);
-      if(right) right->print(out);
+      if(left) left->prettyPrint(out);
+      if(middle) middle->prettyPrint(out);
+      if(right) right->prettyPrint(out);
       *out << endl;
       return;
     }
@@ -335,10 +395,10 @@ class NodeNot : public Node
   public:
     NodeNot(Node* lf) : Node(lf){}
 
-    virtual void print(ostream* out)
+    virtual void prettyPrint(ostream* out)
     {
       *out << "!";
-      if(left) left->print(out);
+      if(left) left->prettyPrint(out);
       return;
     }
 };
@@ -348,11 +408,11 @@ class NodeFunctionCall : public Node
   public:
     NodeFunctionCall(Node* name, Node* params) : Node(name, params){}
 
-    virtual void print(ostream* out)
+    virtual void prettyPrint(ostream* out)
     {
-      if(left) left->print(out);
+      if(left) left->prettyPrint(out);
       *out << "( ";
-      if(right) right->print(out);
+      if(right) right->prettyPrint(out);
       *out << " )" << endl;
     }
 };
@@ -362,11 +422,11 @@ class NodeClass : public Node
   public:
     NodeClass(Node* lf, Node* rt) : Node(lf, rt){}
 
-    virtual void print(ostream* out)
+    virtual void prettyPrint(ostream* out)
     {
       *out << "Class:" << endl;
-      if(left) left->print(out);
-      if(right) right->print(out);
+      if(left) left->prettyPrint(out);
+      if(right) right->prettyPrint(out);
       *out << "END class" << endl;
     }
 };
@@ -379,12 +439,12 @@ class NodeClassBody : public Node
       middle = md;
     }
 
-    virtual void print(ostream* out)
+    virtual void prettyPrint(ostream* out)
     {
       *out << "Class body:" << endl;
-      if(left) left->print(out);
-      if(middle) middle->print(out);
-      if(right) right->print(out);
+      if(left) left->prettyPrint(out);
+      if(middle) middle->prettyPrint(out);
+      if(right) right->prettyPrint(out);
       *out << "END Class body" << endl;
     }
 
@@ -397,7 +457,7 @@ class NodeSimpleType : public Node
   public:
     NodeSimpleType() {}
 
-    virtual void print(ostream* out)
+    virtual void prettyPrint(ostream* out)
     {
       *out << "int ";
     }
@@ -408,9 +468,9 @@ class NodeTypeBracket : public Node
   public:
     NodeTypeBracket(Node* type) : Node(type) {}
 
-    virtual void print(ostream* out)
+    virtual void prettyPrint(ostream* out)
     {
-      left->print(out);
+      left->prettyPrint(out);
       *out << "[]";
     }
 };
@@ -420,12 +480,12 @@ class NodeConstructorDec : public Node
   public:
     NodeConstructorDec(Node* lf=0, Node* rt=0) : Node(lf, rt) {}
 
-    virtual void print(ostream* out)
+    virtual void prettyPrint(ostream* out)
     {
       *out << "Constructor Declaration:" << endl;
-      if(left) left->print(out);
+      if(left) left->prettyPrint(out);
       *out << endl;
-      if(right) right->print(out);
+      if(right) right->prettyPrint(out);
       *out << "END Constructor Declaration" << endl;
     }
 };
@@ -438,12 +498,12 @@ class NodeMethodDec : public Node
       middle = md;
     }
 
-    virtual void print(ostream* out)
+    virtual void prettyPrint(ostream* out)
     {
       *out << "Method Declaration:" << endl;
-      if(left) left->print(out);
-      if(middle) middle->print(out);
-      if(right) right->print(out);
+      if(left) left->prettyPrint(out);
+      if(middle) middle->prettyPrint(out);
+      if(right) right->prettyPrint(out);
       *out << "END Method Declaration" << endl;
     }
 
@@ -456,11 +516,11 @@ class NodeParameterList : public Node
   public: 
     NodeParameterList(Node* lf=0, Node* rt=0) : Node(lf, rt) {}
 
-    virtual void print(ostream* out)
+    virtual void prettyPrint(ostream* out)
     {
       *out << "Parameter List:" << endl;
-      if(left) left->print(out);
-      if(right) right->print(out);
+      if(left) left->prettyPrint(out);
+      if(right) right->prettyPrint(out);
       *out << "END Parameter List" << endl;
     }
 };
@@ -470,11 +530,11 @@ class NodeParameter : public Node
   public:
     NodeParameter(Node* lf, Node* rt) : Node(lf, rt) {}
 
-    virtual void print(ostream* out)
+    virtual void prettyPrint(ostream* out)
     {
       *out << "Parameter:" << endl;
-      if(left) left->print(out);
-      if(right) right->print(out);
+      if(left) left->prettyPrint(out);
+      if(right) right->prettyPrint(out);
       *out << endl << "END Parameter" << endl;
     }
 };
@@ -484,10 +544,10 @@ class NodeBlock : public Node
   public: 
     NodeBlock(Node* block) : Node(block){}
 
-    virtual void print(ostream* out)
+    virtual void prettyPrint(ostream* out)
     {
       *out << "Block:" << endl;
-      if(left) left->print(out);
+      if(left) left->prettyPrint(out);
       *out << "END block" << endl;
     }
 };
@@ -497,13 +557,13 @@ class NodeAssign : public Node
   public:
     NodeAssign(Node* lf, Node* rt) : Node(lf, rt) {}
 
-    virtual void print(ostream* out)
+    virtual void prettyPrint(ostream* out)
     {
       *out << "Assignment" << endl;
-      if(left) left->print(out);
+      if(left) left->prettyPrint(out);
       *out << " = ";
       if(right) {
-        right->print(out);
+        right->prettyPrint(out);
       } else {
         *out << "null" << endl;
       }
@@ -516,10 +576,10 @@ class NodeParamList : public Node
   public: 
     NodeParamList(Node* params) : Node(params) {}
 
-    virtual void print(ostream* out)
+    virtual void prettyPrint(ostream* out)
     {
       if(left) {
-        left->print(out);
+        left->prettyPrint(out);
       } else {
         *out << "void";
       }
@@ -531,11 +591,11 @@ class NodePrint : public Node
   public:
     NodePrint(Node* exp) : Node(exp) {}
 
-    virtual void print(ostream* out)
+    virtual void prettyPrint(ostream* out)
     {
       *out << "Print" << endl;
-      if(left) left->print(out);
-      *out << "END print" << endl;
+      if(left) left->prettyPrint(out);
+      *out << "END prettyPrint" << endl;
     }
 };
 
@@ -544,7 +604,7 @@ class NodeRead : public Node
   public:
     NodeRead() : Node() {}
 
-    virtual void print(ostream *out)
+    virtual void prettyPrint(ostream *out)
     {
       *out << "read()" << endl;
     }
@@ -555,10 +615,10 @@ class NodeFunct : public Node
   public:
     NodeFunct(Node* name, Node* paramList) : Node(name, paramList) {}
 
-    virtual void print(ostream* out)
+    virtual void prettyPrint(ostream* out)
     {
       *out << "Function Declaration:" << endl;
-      if(left) left->print(out);
+      if(left) left->prettyPrint(out);
       *out << "END function declaration" << endl;
     }
 };
@@ -568,11 +628,11 @@ class NodeWhile : public Node
   public:
     NodeWhile(Node* exp, Node* statement) : Node(exp, statement) {}
 
-    virtual void print(ostream* out)
+    virtual void prettyPrint(ostream* out)
     {
       *out << "While:" << endl;
-      if(left) left->print(out);
-      if(right) right->print(out);
+      if(left) left->prettyPrint(out);
+      if(right) right->prettyPrint(out);
       *out << "END while" << endl;
     }
 };
@@ -585,15 +645,15 @@ class NodeConditional : public Node
       optionalElse = els;
     }
 
-    virtual void print(ostream* out)
+    virtual void prettyPrint(ostream* out)
     {
       *out << "If:" << endl;
-      if(left) left->print(out);
+      if(left) left->prettyPrint(out);
       *out << "Then:" << endl;
-      if(right) right->print(out);
+      if(right) right->prettyPrint(out);
       if(optionalElse){
         *out << "Else:" << endl;
-        optionalElse->print(out);
+        optionalElse->prettyPrint(out);
       }
       *out << "END if" << endl;
     }
@@ -607,11 +667,11 @@ class NodeOptional : public Node
   public:
     NodeOptional(Node* opt) : Node(opt) {}
 
-    virtual void print(ostream* out)
+    virtual void prettyPrint(ostream* out)
     {
       *out << "Option:" << endl;
       if(left) {
-        if(left) left->print(out);
+        if(left) left->prettyPrint(out);
       } else {
         *out << "void" << endl;
       }
@@ -624,7 +684,7 @@ class NodeEmptyParam : public Node
   public:
     NodeEmptyParam() : Node() {}
 
-    virtual void print(ostream* out)
+    virtual void prettyPrint(ostream* out)
     {
       *out << "void" << endl;
     }
@@ -635,9 +695,21 @@ class NodeThis : public Node
   public:
     NodeThis() : Node() {}
 
-    virtual void print(ostream* out)
+    virtual void prettyPrint(ostream* out)
     {
       *out << " this";
+    }
+};
+
+class NodeTemp : public Node
+{
+  public:
+    NodeTemp(Node* ident, Node* block) : Node(ident, block) {}
+
+    virtual void prettyPrint(ostream* out)
+    {
+      left->prettyPrint(out);
+      right->prettyPrint(out);
     }
 };
 

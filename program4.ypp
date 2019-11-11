@@ -11,9 +11,12 @@
 #include "node.hpp"
 #include <FlexLexer.h>
 #include <queue>
+#include <stack>
+
 using namespace std;
 
 extern queue<Node*> classes;
+extern stack<string> derivations;
 extern yyFlexLexer scanner;
 extern int row;
 extern int column;
@@ -29,43 +32,61 @@ void yyerror(const char *);
 }
 
 %type<ttype> program exp vardec type ResultType classDeclaration classBody
-%type<ttype> identifier name bracketexp bracketexps multibrackets newexp 
+%type<ttype> identifier name bracketexp bracketexps multibrackets newexp
 %type<ttype> varDeclarations LocalVarDec ConstructorDeclarations
-%type<ttype> ConstructorDeclaration MethodDeclaration MethodDeclarations
+%type<ttype> ConstructorDeclaration temp MethodDeclarations MethodDeclaration 
 %type<ttype> LocalVarDecs Block Statement Statements ConditionalStatement
 %type<ttype> Arglist Parameter ParameterList OptionalExpression newType
 %type<ttype> identifierSemi paramList ParametersAndBlock InnerBlock
 %type<ttype> MoreParameters SimpleType UnaryOp
 %token<ttype> NUM SEMI
 %left NEQ EQ LT GT LEQ GEQ AND OR PLUS MINUS TIMES DIV MOD
-%token INT IDENT COMMA DOT RPAREN LPAREN LBRACK NOT RBRACK LBRACE RBRACE IF
+%token INT IDENT COMMA DOT LPAREN RPAREN LBRACK NOT RBRACK LBRACE RBRACE IF
 %token ASSIGN COMMENT VOID CLASS NEW PRINT READ RETURN ELSE NULLT THIS WHILE
 %token ER_CH ER_WD ERRORS IGNORE
 
 %% /* Grammar rules and actions follow. */
 input:  
-program         {}
+program         {
+                derivations.push("<input> --> <program>");
+                }
 ;
 
 program:
 classDeclaration            {
                             classes.push($1);
+                            derivations.push("<program> --> <classDeclaration>");
                             }      
 | program classDeclaration  {
                             classes.push($2);
-                            }
-| error                     {
-                            cout << "(R" << row << ",C" << column << ") " 
-                                 << yytext() << endl;
+                            derivations.push("<program> --> <program> <classDeclaration>");
                             }
 ;
 
 classDeclaration:
 CLASS identifier LBRACE classBody RBRACE  {
                                           $$=new NodeClass($2, $4);
+                                          derivations.push("<classDeclaration> --> "
+                                                           "CLASS <identifier> LBRACE "
+                                                           "<classBody> RBRACE");
                                           }
 | CLASS identifier LBRACE RBRACE          {
                                           $$=new NodeClass($2, 0);
+                                          derivations.push("<classDeclaration> --> "
+                                                           "CLASS <identifier> LBRACE "
+                                                           "RBRACE");
+                                          }
+| CLASS identifier error                  {
+                                          cout << "(" << row << ", " << column
+                                               << ") Error in class";
+                                          $2->prettyPrint(&cout);
+                                          $$=new NodeError(); // prevent a seg fault.
+                                          }
+| CLASS error                             {
+                                          cout << "(" << row << ", " << column
+                                               << ") Poorly defined class " 
+                                               << endl;
+                                          $$=new NodeError(); // prevent a seg fault.
                                           }
 ;
 
@@ -73,64 +94,137 @@ classBody:
 varDeclarations ConstructorDeclarations MethodDeclarations  {
                                                             $$=new NodeClassBody($1, 
                                                                             $2, $3);
+                                                            derivations.push("<classBody> --> "
+                                                                             "<varDeclarations> "
+                                                                             "<ConstructorDeclarations> "
+                                                                             "<MethodDeclarations>");
                                                             }
+| MethodDeclarations                          {
+                                              $$=new NodeClassBody(0, 0, $1);
+                                              derivations.push("<classBody> --> "
+                                                               "<MethodDeclarations>");
+                                              }
 | varDeclarations                             {
                                               $$=new NodeClassBody($1);
+                                              derivations.push("<classBody> --> <varDeclarations");
                                               }
 | varDeclarations ConstructorDeclarations     {
                                               $$=new NodeClassBody($1, $2);
+                                              derivations.push("<classBody> --> "
+                                                               "<varDeclarations> "
+                                                               "<ConstructorDeclarations>");
                                               }
 | ConstructorDeclarations                     {
                                               $$=new NodeClassBody(0, $1);
+                                              derivations.push("<classBody> --> "
+                                                               "<ConstructorDeclarations>");
                                               }
 | ConstructorDeclarations MethodDeclarations  {
                                               $$=new NodeClassBody(0, $1, $2);
-                                              }
-| MethodDeclarations                          {
-                                              $$=new NodeClassBody(0, 0, $1);
+                                              derivations.push("<classBody> --> "
+                                                               "<ConstructorDeclarations> "
+                                                               "<MethodDeclarations>");
                                               }
 | varDeclarations MethodDeclarations          {
                                               $$=new NodeClassBody($1, 0, $2);
+                                              derivations.push("<classBody> --> "
+                                                               "<varDeclarations> "
+                                                               "<MethodDeclarations>");
                                               }
+| error                                       {
+                                              cout << "(" << row << ", " 
+                                                     << column << ") "
+                                                     << "Bad class body" << endl;
+                                              }                                            
 ;
 
 varDeclarations:
 vardec                    {
                           $$=$1;
+                          derivations.push("<varDeclarations> --> <vardec>");
                           }
 | varDeclarations vardec  {
                           $$=new Node($1, $2);
+                          derivations.push("<varDeclarations> --> <varDeclarations> <vardec>");
                           }
+| varDeclarations error   {
+                          cout << "(" << row << ", " << column << ")"
+                               << " Bad variable declaration around ("
+                               << yytext() << ")" << endl;
+                          }                   
 ;
 
 ConstructorDeclarations:
 ConstructorDeclaration                            {
                                                   $$=$1;
+                                                  derivations.push("<ConstructorDeclarations> --> "
+                                                                   "<ConstructorDeclaration>");
                                                   }  
 | ConstructorDeclarations ConstructorDeclaration  {
                                                   $$=new Node($1, $2);
+                                                  derivations.push("<ConstructorDeclarations> --> "
+                                                                   "<ConstructorDeclarations> "
+                                                                   "<ConstructorDeclaration>");
                                                   }
 ;
 
 ConstructorDeclaration:
-identifier LPAREN ParametersAndBlock  {
+temp                                  {
                                       //cout << "Constructor Declaration" << endl;
-                                      $$=new NodeConstructorDec($1, $3);
+                                      $$=new NodeConstructorDec($1);
+                                      derivations.push("<ConstructorDeclaration> --> <identifier> "
+                                                       "LPAREN <ParameterList> RPAREN <Block>");
+
+                                      }
+| identifier error                    {
+                                      cout << "(" << row << ", " << column << ")"
+                                          << " Bad constructor declaration for (";
+                                      $1->prettyPrint(&cout);
+                                      cout << ")" << endl;
                                       }
 ;
 
 MethodDeclarations:
 MethodDeclaration                     {
                                       $$=new Node($1);
+                                      derivations.push("<MethodDeclarations> --> <MethodDeclaration>");
                                       }
-| MethodDeclarations MethodDeclaration  {
+| MethodDeclarations MethodDeclaration{
                                       $$=new Node($1, $2);
+                                      derivations.push("<MethodDeclarations> --> <MethodDeclarations> "
+                                                       "<MethodDeclaration>");
+                                      }
+;
+
+// I need this to avoid Constructor / Method conflicts
+temp:
+identifier LPAREN ParametersAndBlock  {
+                                      $$=new NodeTemp($1, $3);
                                       }
 ;
 
 MethodDeclaration:
-ResultType identifier LPAREN ParametersAndBlock {
-                                                $$=new NodeMethodDec($1, $2, $4);
+ResultType temp                                 {
+                                                $$=new NodeMethodDec($1, $2);
+                                                derivations.push("<MethodDeclaration> --> "
+                                                                 "<ResultType> <identifier> "
+                                                                 "LPAREN <ParameterList> "
+                                                                 "RPAREN "
+                                                                 "<Block>");
+                                                }
+| ResultType identifier error                   {
+                                                cout << "(" << row << ", " 
+                                                     << column << ") "
+                                                     << "Bad method declaration for (";
+                                                $2->prettyPrint(&cout);
+                                                cout << ")" << endl;
+                                                }
+| ResultType error                              {
+                                                cout << "(" << row << ", " 
+                                                     << column << ") "
+                                                     << "Bad identifier for (";
+                                                $1->prettyPrint(&cout);
+                                                cout << ")" << endl;
                                                 }
 ;
 
@@ -140,70 +234,92 @@ ParameterList RPAREN Block  {
                             $$=new Node($1, $3);
                             }
 | RPAREN Block              {
+                            derivations.push("<ParameterList --> EMPTY");
                             $$=new Node(0, $2);
                             }
 ;
 
 ResultType:
 type    {
+        derivations.push("<ResultType> --> <type>");
         $$=$1;
         }
-| VOID    {
+| VOID  {
+        derivations.push("<ResultType> --> VOID");
         $$=0;
         }
 ;
 
 ParameterList:
 Parameter                         {
+                                  derivations.push("<ParameterList> --> <Parameter>");
                                   $$=$1;
                                   }
 | Parameter MoreParameters        {
                                   $$=new NodeParameterList($1, $2);
+                                  derivations.push("<ParameterList> --> <Parameter> "
+                                                   "<MoreParameters>");
                                   }
 ;
 
 MoreParameters:
 COMMA Parameter                   {
                                   $$=$2;
+                                  derivations.push("<MoreParameters> --> COMMA <Parameter>");
                                   }
 | COMMA Parameter MoreParameters  {
                                   $$=new NodeParameterList($2, $3);
+                                  derivations.push("<MoreParameters> --> COMMA <Parameter> "
+                                                   "<MoreParameters>");
                                   }
 ;
 
 Parameter:
 type identifier {
                 $$=new NodeParameter($1, $2);
+                derivations.push("<Parameter> --> <type> <identifier>");
                 }
 ;
 
 vardec:
 type identifier SEMI                  {
+                                      derivations.push("<vardec> --> <type> <identifier> SEMI");
                                       $$=new nodeVardec($1, $2);
                                       }
 | identifier identifierSemi           {
+                                      derivations.push("<vardec> --> <identifier> <identifierSemi>");
                                       $$=new nodeVardec($1,$2);
                                       }
 | type multibrackets identifierSemi   {
                                       $$=new nodeVardec($1,$2,$3);
+                                      derivations.push("<vardec> --> <type> "
+                                                       "<multibrackets> "
+                                                       "<identifierSemi>");
                                       }
 | identifier multibrackets identifierSemi {
                                           $$=new nodeVardec($1,$2,$3);
+                                          derivations.push("<vardec> --> "
+                                                           "<identifier> "
+                                                           "<multibrackets> "
+                                                           "<identifierSemi>");
                                           }
 ;
 
 identifierSemi:
 identifier SEMI   {
+                  derivations.push("<identifierSemi> --> <identifier> SEMI");
                   $$=$1;
                   }
 ;
 
 Block:
 LBRACE InnerBlock RBRACE  {
+                          derivations.push("<Block> --> LBRACE <InnerBlock> RBRACE");
                           $$=new NodeBlock($2);
                           }
-| LBRACE RBRACE             {
+| LBRACE RBRACE           {
                           $$=0;
+                          derivations.push("<Block> --> LBRACE RBRACE");
                           }
 ;
 
@@ -212,274 +328,374 @@ LBRACE InnerBlock RBRACE  {
 InnerBlock:
 LocalVarDecs              {
                           $$=new Node($1);
+                          derivations.push("<InnerBlock> --> <LocalVardecs>");
                           }
 | Statements              {
                           $$=new Node(0, $1);
+                          derivations.push("<InnerBlock> --> <Statements>");
                           }
 | LocalVarDecs Statements {
                           $$=new Node($1, $2);
+                          derivations.push("<InnerBlock> --> <LocalVarDecs> "
+                                           "<Statements>");
                           }
 ;
 
 LocalVarDecs:
 LocalVarDec                 {
                             $$=$1;
+                            derivations.push("<LocalVardecs> --> <LocalVarDec>");
                             }
 | LocalVarDecs LocalVarDec  {
                             $$=new Node($1, $2);
+                            derivations.push("<LocalVarDecs> --> <LocalVarDecs> "
+                                             "<LocalVarDec>");
                             }
 ;
 
 Statements:
 Statement             {
                       $$=$1;
+                      derivations.push("<Statements> --> <Statement>");
                       }
-| Statements Statement  {
+| Statements Statement{
                       $$=new Node($1, $2);
+                      derivations.push("<Statements> --> <Statements> <Statement>");
                       }
 ;
 
 Statement:
 name ASSIGN exp SEMI                {
                                     $$=new NodeAssign($1, $3);
+                                    derivations.push("<Statement> --> <name> "
+                                                     "ASSIGN <exp> SEMI");
                                     }
 | name paramList SEMI               {
                                     $$=new NodeFunct($1, $2);
+                                    derivations.push("<Statement> --> <name> "
+                                                     "<paramList> SEMI");
                                     }
 | PRINT paramList SEMI              {
                                     $$=new NodePrint($2);
+                                    derivations.push("<Statement> --> PRINT "
+                                                     "<paramList> SEMI");
                                     }
 | ConditionalStatement              {
                                     $$=$1;
+                                    derivations.push("<Statement> --> "
+                                                     "<ConditionalStatement>");
                                     }
 | WHILE LPAREN exp RPAREN Statement {
                                     $$=new NodeWhile($3, $5);
+                                    derivations.push("<Statement> --> WHILE "
+                                                     "LPAREN <exp> RPAREN "
+                                                     "<Statement>");
                                     }
 | RETURN OptionalExpression         {
                                     $$=new NodeOptional($2);
+                                    derivations.push("<Statement> --> RETURN "
+                                                     "<OptionalExpressions");
                                     }
 | Block                             {
                                     $$=$1;
+                                    derivations.push("<Statement> --> <Block>");
                                     }
-| SEMI
+| SEMI                              {
+                                    derivations.push("<Statement> --> SEMI");
+                                    }
 ;
 
 
 LocalVarDec:
 type identifier SEMI  {
                       $$=new nodeVardec($1, $2);
+                      derivations.push("<LocalVarDec> --> <type> "
+                                       "<identifier> SEMI");
                       }
 ;
 
 Arglist:
 exp                 {
                     $$=$1;
+                    derivations.push("<Arglist> --> <exp>");
                     }
 | Arglist COMMA exp {
                     $$=new Node($1, $3);
+                    derivations.push("<Arglist> --> <Arglist> COMMA <exp>");
                     }
 ;
 
 OptionalExpression:
 SEMI        {
             $$=0;
+            derivations.push("<OptionalExpression> --> SEMI");
             }
 | exp SEMI  {
             $$=$1;
+            derivations.push("<OptionalExpression> --> <exp> SEMI");
             }
 ;
 
 ConditionalStatement:
 IF LPAREN exp RPAREN Statement  {
                                 $$=new NodeConditional($3, $5, 0);
+                                derivations.push("<ConditionalStatement> --> "
+                                                "IF LPAREN <exp> RPAREN "
+                                                "<Statement>");
                                 }
 | IF LPAREN exp RPAREN Statement ELSE Statement {
                                                 $$=new NodeConditional($3, $5, 
                                                                        $7);
+                                                derivations.push("<ConditionalStatement>"
+                                                                 " --> "
+                                                                 "IF LPAREN exp"
+                                                                 " RPAREN <State"
+                                                                 "ment> ELSE <St"
+                                                                 "atement>");
                                                 }
 ;
 
 exp:
 name                  {
                       $$=$1;
+                      derivations.push("<exp> --> <name>");
                       }
 | NULLT               {
                       $$=0;
+                      derivations.push("<exp> --> NULLT");
                       }
 | NUM       		      {
+                      derivations.push("<exp> --> NUM");
                       $$=new nodeNum($1->getint()); delete $1; 
                       }
 | name paramList      {
+                      derivations.push("<exp> --> <name> <paramList>");
                       $$=new NodeFunctionCall($1, $2);
                       }
 | exp OR exp          {
                       $$=new Node($1,$3);
                       $$->setval(" || ");
+                      derivations.push("<exp> --> <exp> OR <exp>");
                       }
 | exp AND exp         {
                       $$=new Node($1,$3);
                       $$->setval(" && ");
+                      derivations.push("<exp> --> <exp> AND <exp>");
                       }
 | exp MOD exp         {
                       $$=new Node($1,$3);
                       $$->setval(" % "); 
+                      derivations.push("<exp> --> <exp> MOD <exp>");
                       }
 | READ LPAREN RPAREN  {
                       $$=new NodeRead();
+                      derivations.push("<exp> --> READ LPAREN RPAREN");
                       }
 | exp PLUS exp        { 
                       $$=new Node($1,$3);
                       $$->setval(" + ");
+                      derivations.push("<exp> --> <exp> PLUS <exp>");
                       }
 | exp MINUS exp       { 
                       $$=new Node($1,$3);
                       $$->setval(" - ");
+                      derivations.push("<exp> --> <exp> MINUS <exp>");
                       }
 | exp TIMES exp       { 
                       $$=new Node($1,$3);
                       $$->setval(" * ");
+                      derivations.push("<exp> --> <exp> TIMES <exp>");
                       }
 | exp DIV exp         { 
                       $$=new Node($1,$3);
                       $$->setval(" / ");
+                      derivations.push("<exp> --> <exp> DIV <exp>");
                       }
 | UnaryOp             { 
                       $$=$1;
+                      derivations.push("<exp> --> <UnaryOp>");
                       }
 | LPAREN exp RPAREN   { 
                       $$=new nodeParExp($2);
+                      derivations.push("<exp> --> LPAREN <exp> RPAREN");
                       }
 | exp GT exp    {
                 $$=new nodeComparatorExp(
                   nodeComparatorExp::Comparator::GT, $1, $3);
+                derivations.push("<exp> --> <exp> GT <exp>");
                 }
 | exp LT exp    {
                 $$=new nodeComparatorExp(
                   nodeComparatorExp::Comparator::LT, $1, $3);
+                derivations.push("<exp> --> <exp> LT <exp>");
                 }
 | exp EQ exp    {
                 $$=new nodeComparatorExp(
                   nodeComparatorExp::Comparator::EQ, $1, $3);
+                derivations.push("<exp> --> <exp> EQ <exp>");
                 }
 | exp NEQ exp   {
                 $$=new nodeComparatorExp(
                   nodeComparatorExp::Comparator::NEQ, $1, $3);
+                derivations.push("<exp> --> <exp> NEQ <exp>");
                 }
 | exp LEQ exp   {
                 $$=new nodeComparatorExp(
                   nodeComparatorExp::Comparator::LEQ, $1, $3);
+                derivations.push("<exp> --> <exp> LEQ <exp>");
                 }
 | exp GEQ exp   {
                 $$=new nodeComparatorExp(
                   nodeComparatorExp::Comparator::GEQ, $1, $3);
+                derivations.push("<exp> --> <exp> GEQ <exp>");
                 }
 | newexp        {
                 $$=$1;
+                derivations.push("<exp> --> <newexp>");
                 }
 ;
 
 newexp:
 NEW identifier paramList              {
                                       $$=new nodeNewExp($2, $3, 0);
+                                      derivations.push("<newexp> --> NEW "
+                                                       "<identifier> "
+                                                       "<paramList>");
                                       }
 | newType bracketexps multibrackets   {
                                       $$=new nodeNewExp($1, $2, $3);
+                                      derivations.push("<newexp> --> "
+                                                       "<newType> "
+                                                       "<bracketexps> "
+                                                       "<multibrackets>");
                                       }
 | newType bracketexps                 {
                                       $$=new nodeNewExp($1, $2);
+                                      derivations.push("<newexp> --> "
+                                                       "<newType> "
+                                                       "<bracketexps>");
                                       }
 | newType multibrackets               {
                                       $$=new nodeNewExp($1, 0, $2);
+                                      derivations.push("<newexp> --> "
+                                                       "<newType> "
+                                                       "<multibrackets>");
                                       }
 ;
 
 UnaryOp:
 MINUS exp   {
             $$=new NodeNegative($2);
+            derivations.push("<UnaryOp> --> MINUS <exp>");
             }
 | PLUS exp  {
             $$=new NodePositive($2);
+            derivations.push("<UnaryOp> --> PLUS <exp>");
             }
 | NOT exp   {
             $$=new NodeNot($2);
+            derivations.push("<UnaryOp> --> NOT <exp>");
             }
 ;
 
 paramList:
 LPAREN RPAREN           {
                         $$=new NodeParamList(0);
+                        derivations.push("<paramList> --> LPAREN RPAREN");
                         }
 | LPAREN Arglist RPAREN {
                         $$=new NodeParamList($2);
+                        derivations.push("<paramList> --> LPAREN"
+                                         " <Arglist> RPAREN");
                         }
 ;
 
 newType:
 NEW SimpleType      {
                     $$=$2;
+                    derivations.push("<newType> --> NEW <SimpeType>");
                     }
 ;
 
 name:
 THIS                  {
                       $$=new NodeThis();
+                      derivations.push("<name> --> THIS");
                       }
 | identifier          {
                       $$=$1;
+                      derivations.push("<name> --> <identifier>");
                       }
 | name DOT identifier {
                       $$=new nodeDot($1,$3);
+                      derivations.push("<name> --> <name> DOT <identifier>");
                       }
 | name bracketexps    {
                       $$=new Node($1,$2);
+                      derivations.push("<name> --> <name> <bracketexps>");
                       }
 ;
 
 bracketexps:
 bracketexp                {
                           $$=$1;
+                          derivations.push("<bracketexps> --> <bracketexp>");
                           }
 | bracketexps bracketexp  {
                           $$=new Node($1,$2);
+                          derivations.push("<bracketexps> --> <bracketexps>"
+                                           " <bracketexp>");
                           }
 ;
 
 bracketexp:
 LBRACK exp RBRACK       {
                         $$=new nodeBracketExp($2);
+                        derivations.push("<bracketexp> --> "
+                                         "LBRACK <exp> RBRACK");
                         } 
 ;
 
 multibrackets:
 LBRACK RBRACK                 {
                               $$=new NodeEmptyBrackets();
+                              derivations.push("<multibrackets> --> "
+                                               "LBRACK RBRACK");
                               }
 | multibrackets LBRACK RBRACK {
                               $$=new NodeEmptyBrackets($1);
+                              derivations.push("<multibrackets> --> "
+                                               "<multibrackets> "
+                                               "LBRACK RBRACK");
                               }
 ;
 
 type:
 SimpleType            {
                       $$=$1;
+                      derivations.push("<type> --> <SimpleType");
                       }
 | type LBRACK RBRACK  {
                       $$=new NodeTypeBracket($1);
+                      derivations.push("<type> --> <type> LBRACK RBRACK");
                       }
 ;
 
 SimpleType:
 INT           {
               $$=new NodeSimpleType();
+              derivations.push("<SimpleType> --> INT");
               }
 | identifier  {
               $$=$1;
+              derivations.push("<SimpleType> --> <identifier>");
               }
 ;
 
 identifier:
 IDENT           {
                 $$=new NodeIdentifier(yytext());
+                derivations.push("<identifier> --> IDENT");
                 }
 ;
 %%

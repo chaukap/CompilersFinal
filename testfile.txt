@@ -1,9 +1,21 @@
 class testy2
 {
-    int y;
+    int y; 
 
-    testy2(int a, int b) {
-        while(n > 9) print(asdf);
-        
+    testy2(int y) {a = y;}
+
+    void funt(int a, int y, int e)
+    {
+        h = 0;
+        return h;
+    }
+}
+
+class testy1
+{
+    int x;
+
+    void function3(){
+        return;
     }
 }

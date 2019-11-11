@@ -4,7 +4,7 @@
 # COSC 4785
 
 CXX=g++
-CXXFLAGS=-ggdb -std=c++11 -Wall
+CXXFLAGS=-ggdb -std=c++11 -Wall -Wno-sign-compare
 YACC=bison
 YFLAGS=--report=state -W -d -v
 LEX=flex

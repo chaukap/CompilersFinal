@@ -10,15 +10,19 @@
 #include "program4.tab.hpp"
 #include <FlexLexer.h>
 #include<queue>
+#include<string>
+#include<stack>
 using std::cout;
 using std::endl;
 using std::queue;
+using std::stack;
 
 extern int row;
 extern int column;
 extern bool hasValue;
 
 queue<Node*> classes;
+stack<string> derivations;
 yyFlexLexer scanner;
 
 int main()
@@ -27,11 +31,17 @@ int main()
 
   cout << endl << endl;
   
-  Node* top;
-  while(!classes.empty()){
-    top = classes.front();
-    top->print(&cout);
+//  Node* top;
+//  while(!classes.empty()){
+//    top = classes.front();
+//    top->prettyPrint(&cout);
+//    cout << endl;
+//    classes.pop();
+//  }
+
+  while(!derivations.empty()){
+    cout << derivations.top();
     cout << endl;
-    classes.pop();
+    derivations.pop();
   }
 }
