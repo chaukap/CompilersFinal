@@ -240,7 +240,6 @@ class NodeIdentifier : public Node
       *out << " " << identifier;
     }
 
-  protected:
     string identifier;
 };
 

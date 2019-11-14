@@ -31,14 +31,14 @@ void yyerror(const char *);
   Node *ttype;
 }
 
-%type<ttype> program exp vardec type ResultType classDeclaration classBody
+%type<ttype> program exp vardec type classDeclaration classBody
 %type<ttype> identifier name bracketexp bracketexps multibrackets newexp
 %type<ttype> varDeclarations LocalVarDec ConstructorDeclarations
 %type<ttype> ConstructorDeclaration temp MethodDeclarations MethodDeclaration 
 %type<ttype> LocalVarDecs Block Statement Statements ConditionalStatement
 %type<ttype> Arglist Parameter ParameterList OptionalExpression newType
 %type<ttype> identifierSemi paramList ParametersAndBlock InnerBlock
-%type<ttype> MoreParameters SimpleType UnaryOp
+%type<ttype> MoreParameters UnaryOp
 %token<ttype> NUM SEMI
 %left NEQ EQ LT GT LEQ GEQ AND OR PLUS MINUS TIMES DIV MOD
 %token INT IDENT COMMA DOT LPAREN RPAREN LBRACK NOT RBRACK LBRACE RBRACE IF
@@ -106,7 +106,7 @@ varDeclarations ConstructorDeclarations MethodDeclarations  {
                                               }
 | varDeclarations                             {
                                               $$=new NodeClassBody($1);
-                                              derivations.push("<classBody> --> <varDeclarations");
+                                              derivations.push("<classBody> --> <varDeclarations>");
                                               }
 | varDeclarations ConstructorDeclarations     {
                                               $$=new NodeClassBody($1, $2);
@@ -130,12 +130,7 @@ varDeclarations ConstructorDeclarations MethodDeclarations  {
                                               derivations.push("<classBody> --> "
                                                                "<varDeclarations> "
                                                                "<MethodDeclarations>");
-                                              }
-| error                                       {
-                                              cout << "(" << row << ", " 
-                                                     << column << ") "
-                                                     << "Bad class body" << endl;
-                                              }                                            
+                                              }                                          
 ;
 
 varDeclarations:
@@ -176,12 +171,6 @@ temp                                  {
                                                        "LPAREN <ParameterList> RPAREN <Block>");
 
                                       }
-| identifier error                    {
-                                      cout << "(" << row << ", " << column << ")"
-                                          << " Bad constructor declaration for (";
-                                      $1->prettyPrint(&cout);
-                                      cout << ")" << endl;
-                                      }
 ;
 
 MethodDeclarations:
@@ -204,28 +193,18 @@ identifier LPAREN ParametersAndBlock  {
 ;
 
 MethodDeclaration:
-ResultType temp                                 {
-                                                $$=new NodeMethodDec($1, $2);
-                                                derivations.push("<MethodDeclaration> --> "
-                                                                 "<ResultType> <identifier> "
-                                                                 "LPAREN <ParameterList> "
-                                                                 "RPAREN "
-                                                                 "<Block>");
-                                                }
-| ResultType identifier error                   {
-                                                cout << "(" << row << ", " 
-                                                     << column << ") "
-                                                     << "Bad method declaration for (";
-                                                $2->prettyPrint(&cout);
-                                                cout << ")" << endl;
-                                                }
-| ResultType error                              {
-                                                cout << "(" << row << ", " 
-                                                     << column << ") "
-                                                     << "Bad identifier for (";
-                                                $1->prettyPrint(&cout);
-                                                cout << ")" << endl;
-                                                }
+type temp     {
+              $$=new NodeMethodDec($1, $2);
+              derivations.push("<MethodDeclaration> --> "
+                               "<ResultType> <identifier> "
+                               "LPAREN <ParameterList> RPAREN <Block>");
+              }
+| VOID temp   {
+              $$=new NodeMethodDec(0, $2);
+              derivations.push("<MethodDeclaration> --> "
+                               "VOID <identifier> "
+                               "LPAREN <ParameterList> RPAREN <Block>");
+              }
 ;
 
 /* Returns a regular node. If LEFT is NULL, there is no parameter list. */
@@ -239,16 +218,6 @@ ParameterList RPAREN Block  {
                             }
 ;
 
-ResultType:
-type    {
-        derivations.push("<ResultType> --> <type>");
-        $$=$1;
-        }
-| VOID  {
-        derivations.push("<ResultType> --> VOID");
-        $$=0;
-        }
-;
 
 ParameterList:
 Parameter                         {
@@ -394,7 +363,7 @@ name ASSIGN exp SEMI                {
 | RETURN OptionalExpression         {
                                     $$=new NodeOptional($2);
                                     derivations.push("<Statement> --> RETURN "
-                                                     "<OptionalExpressions");
+                                                     "<OptionalExpressions>");
                                     }
 | Block                             {
                                     $$=$1;
@@ -465,6 +434,7 @@ name                  {
                       derivations.push("<exp> --> NULLT");
                       }
 | NUM       		      {
+                      derivations.push("NUM --> " + to_string($1->getint()));
                       derivations.push("<exp> --> NUM");
                       $$=new nodeNum($1->getint()); delete $1; 
                       }
@@ -611,10 +581,14 @@ LPAREN RPAREN           {
 ;
 
 newType:
-NEW SimpleType      {
-                    $$=$2;
-                    derivations.push("<newType> --> NEW <SimpeType>");
-                    }
+NEW INT       {
+              $$=new NodeSimpleType();
+              derivations.push("<newType> --> NEW INT");
+              }
+| NEW identifier  {
+              $$=$2;
+              derivations.push("<newType> --> NEW <identifier>");
+              }
 ;
 
 name:
@@ -634,6 +608,25 @@ THIS                  {
                       $$=new Node($1,$2);
                       derivations.push("<name> --> <name> <bracketexps>");
                       }
+;
+
+type:
+INT           {
+              $$=new NodeSimpleType();
+              derivations.push("<type> --> INT");
+              }
+| identifier  {
+              $$=$1;
+              derivations.push("<type> --> <identifier>");
+              }
+| INT multibrackets   {
+                      $$=new NodeTypeBracket($2);
+                      derivations.push("<type> --> INT <multibrackets>");
+                      }
+| identifier multibrackets  {
+                            $$=new Node($1, $2);
+                            derivations.push("<type> --> <identifier> <multibrackets>");
+                            }
 ;
 
 bracketexps:
@@ -670,31 +663,12 @@ LBRACK RBRACK                 {
                               }
 ;
 
-type:
-SimpleType            {
-                      $$=$1;
-                      derivations.push("<type> --> <SimpleType");
-                      }
-| type LBRACK RBRACK  {
-                      $$=new NodeTypeBracket($1);
-                      derivations.push("<type> --> <type> LBRACK RBRACK");
-                      }
-;
-
-SimpleType:
-INT           {
-              $$=new NodeSimpleType();
-              derivations.push("<SimpleType> --> INT");
-              }
-| identifier  {
-              $$=$1;
-              derivations.push("<SimpleType> --> <identifier>");
-              }
-;
-
 identifier:
 IDENT           {
                 $$=new NodeIdentifier(yytext());
+                string s("IDENT --> ");
+                s.append(yytext());
+                derivations.push(s);
                 derivations.push("<identifier> --> IDENT");
                 }
 ;

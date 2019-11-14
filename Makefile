@@ -34,4 +34,4 @@ test : program4
 
 tarball : 
 	tar -czvf program4.tar program4.lpp program4.cpp node.hpp program4.ypp \
-	Makefile
+	Makefile program4.odt
