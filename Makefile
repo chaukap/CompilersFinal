@@ -13,7 +13,7 @@ LFLAGS=--warn
 
 .PHONY : clean test tarball
 
-program4 : program4.tab.cpp program4.tab.hpp program4_lex.cpp program4.cpp node.hpp
+program4 : program4.tab.cpp program4.tab.hpp program4_lex.cpp program4.cpp node.hpp symbolTable.hpp
 	$(CXX) $(CXXFLAGS) program4.cpp program4.tab.cpp program4_lex.cpp -o program4
 
 program4.tab.cpp : program4.ypp node.hpp

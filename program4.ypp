@@ -10,6 +10,7 @@
 #include <iostream>
 #include "node.hpp"
 #include <FlexLexer.h>
+#include "symbolTable.hpp"
 #include <queue>
 #include <stack>
 
@@ -164,9 +165,9 @@ ConstructorDeclaration                            {
 ;
 
 ConstructorDeclaration:
-temp                                  {
+identifier LPAREN ParametersAndBlock  {
                                       //cout << "Constructor Declaration" << endl;
-                                      $$=new NodeConstructorDec($1);
+                                      $$=new NodeConstructorDec($1, $3);
                                       derivations.push("<ConstructorDeclaration> --> <identifier> "
                                                        "LPAREN <ParameterList> RPAREN <Block>");
 
@@ -251,27 +252,12 @@ type identifier {
 ;
 
 vardec:
-type identifier SEMI                  {
-                                      derivations.push("<vardec> --> <type> <identifier> SEMI");
-                                      $$=new nodeVardec($1, $2);
-                                      }
-| identifier identifierSemi           {
-                                      derivations.push("<vardec> --> <identifier> <identifierSemi>");
+type identifierSemi                   {
                                       $$=new nodeVardec($1,$2);
-                                      }
-| type multibrackets identifierSemi   {
-                                      $$=new nodeVardec($1,$2,$3);
                                       derivations.push("<vardec> --> <type> "
                                                        "<multibrackets> "
                                                        "<identifierSemi>");
                                       }
-| identifier multibrackets identifierSemi {
-                                          $$=new nodeVardec($1,$2,$3);
-                                          derivations.push("<vardec> --> "
-                                                           "<identifier> "
-                                                           "<multibrackets> "
-                                                           "<identifierSemi>");
-                                          }
 ;
 
 identifierSemi:
@@ -582,11 +568,11 @@ LPAREN RPAREN           {
 
 newType:
 NEW INT       {
-              $$=new NodeSimpleType();
+              $$=new NodeNewType();
               derivations.push("<newType> --> NEW INT");
               }
 | NEW identifier  {
-              $$=$2;
+              $$=new NodeNewType($2);
               derivations.push("<newType> --> NEW <identifier>");
               }
 ;
@@ -612,19 +598,19 @@ THIS                  {
 
 type:
 INT           {
-              $$=new NodeSimpleType();
+              $$=new NodeType();
               derivations.push("<type> --> INT");
               }
 | identifier  {
-              $$=$1;
+              $$=new NodeType($1);
               derivations.push("<type> --> <identifier>");
               }
 | INT multibrackets   {
-                      $$=new NodeTypeBracket($2);
+                      $$=new NodeType(0, $2);
                       derivations.push("<type> --> INT <multibrackets>");
                       }
 | identifier multibrackets  {
-                            $$=new Node($1, $2);
+                            $$=new NodeType($1, $2);
                             derivations.push("<type> --> <identifier> <multibrackets>");
                             }
 ;

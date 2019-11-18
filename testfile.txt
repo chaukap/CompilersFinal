@@ -1,6 +1,8 @@
 class testy2
 {
     int y; 
+    int[] z;
+    testy1[][] asdf;
 
     testy2(int y) {a = y;}
 
@@ -14,8 +16,4 @@ class testy2
 class testy1
 {
     int x;
-
-    void function3(){
-        return;
-    }
 }

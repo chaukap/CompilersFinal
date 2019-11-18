@@ -16,12 +16,14 @@
 #define NODE_HPP
 #include<iostream>
 #include<string>
+#include "symbolTable.hpp"
 
 using std::string;
 using std::endl;
 using std::ostream;
 using std::cout;
 
+extern SymbolTable* baseSymbolTable;
 
 class Node
 {
@@ -48,7 +50,7 @@ class Node
     {
       return dval;
     }
-    string getstring() const
+    virtual string getstring() const
     {
       return sval;
     }
@@ -104,6 +106,12 @@ class Node
       if(right) right->prettyPrint(out);
       //*out << endl;
       return;
+    }
+
+    virtual void generateSymbolTable(SymbolTable* parent)
+    {
+      if(left) left->generateSymbolTable(parent);
+      if(right) right->generateSymbolTable(parent);
     }
 
   protected:
@@ -222,11 +230,13 @@ class NodeIdentifier : public Node
     NodeIdentifier(string* name) : Node(0, 0)
     {
       identifier = *name;
+      sval = *name;
     }
 
     NodeIdentifier(string name) : Node(0, 0)
     {
       identifier = name;
+      sval = name;
     }
 
     virtual void print(ostream* out)
@@ -246,10 +256,7 @@ class NodeIdentifier : public Node
 class nodeVardec : public Node 
 {
   public:
-    nodeVardec(Node* lf=0, Node* md=0, Node* rt=0) : Node(lf,rt)
-    {
-      middle = md;
-    }
+    nodeVardec(Node* lf, Node* rt) : Node(lf,rt) {}
 
     virtual void print(ostream* out)
     {
@@ -261,24 +268,36 @@ class nodeVardec : public Node
     {
       *out << "Vardec:" << endl;
       if(left) left->prettyPrint(out);
-      if(middle) middle->prettyPrint(out);
       if(right) right->prettyPrint(out);
       *out << endl << "END vardec" << endl;
     }
 
-  protected:
-    Node* middle;
+    virtual void generateSymbolTable(SymbolTable* parent)
+    {
+      SymbolTableEntry* entry = new SymbolTableEntry(right->getstring(),
+                                                     left->getstring());
+      parent->insert(entry);
+    } 
 };
 
 class NodeEmptyBrackets : public Node
 {
   public:
-    NodeEmptyBrackets(Node* moreBrackets=0) : Node(moreBrackets) {}
+    NodeEmptyBrackets(Node* moreBrackets=0) : Node(moreBrackets) 
+    {
+      sval = "[]";
+    }
 
     virtual void prettyPrint(ostream* out)
     {
       if(left) left->prettyPrint(out);
       *out << "[]";
+    }
+
+    virtual string getstring() const
+    {
+      if(left) return sval + left->getstring();
+      else return sval;
     }
 };
 
@@ -428,6 +447,17 @@ class NodeClass : public Node
       if(right) right->prettyPrint(out);
       *out << "END class" << endl;
     }
+
+    virtual void generateSymbolTable(SymbolTable* parent)
+    {
+      SymbolTable* table = new SymbolTable(left->getstring(), parent);
+      ClassSymbolTableEntry* entry = new ClassSymbolTableEntry(left->getstring(),
+                                                               "class", 
+                                                               table);
+      parent->insert(entry);
+
+      if(right) right->generateSymbolTable(table);
+    }
 };
 
 class NodeClassBody : public Node
@@ -447,14 +477,42 @@ class NodeClassBody : public Node
       *out << "END Class body" << endl;
     }
 
+    virtual void generateSymbolTable(SymbolTable* parent)
+    {
+      if(left) left->generateSymbolTable(parent);
+      if(right) right->generateSymbolTable(parent);
+      if(middle) middle->generateSymbolTable(parent);
+    }
+
   protected:
     Node* middle;
 };
 
-class NodeSimpleType : public Node
+class NodeType : public Node
 {
   public:
-    NodeSimpleType() {}
+    NodeType(Node* lf=0, Node* rt=0) : Node(lf,rt) 
+    {
+      if(!lf)
+      {
+        if(!rt)
+        {
+          sval = "int";
+        }
+        else
+        {
+          sval = "int" + right->getstring();
+        }
+      } 
+      else if(!rt)
+      {
+        sval = left->getstring();
+      }
+      else
+      {
+        sval = left->getstring() + right->getstring();
+      }
+    }
 
     virtual void prettyPrint(ostream* out)
     {
@@ -462,22 +520,16 @@ class NodeSimpleType : public Node
     }
 };
 
-class NodeTypeBracket : public Node
+class NodeNewType : public Node
 {
   public:
-    NodeTypeBracket(Node* type) : Node(type) {}
-
-    virtual void prettyPrint(ostream* out)
-    {
-      left->prettyPrint(out);
-      *out << "[]";
-    }
+    NodeNewType(Node* ident=0) : Node(ident) {}
 };
 
 class NodeConstructorDec : public Node
 {
   public:
-    NodeConstructorDec(Node* lf=0, Node* rt=0) : Node(lf, rt) {}
+    NodeConstructorDec(Node* lf, Node* rt) : Node(lf, rt) {}
 
     virtual void prettyPrint(ostream* out)
     {
@@ -487,27 +539,45 @@ class NodeConstructorDec : public Node
       if(right) right->prettyPrint(out);
       *out << "END Constructor Declaration" << endl;
     }
+
+    virtual void generateSymbolTable(SymbolTable* parent)
+    {
+      SymbolTable* table = new SymbolTable(left->getstring(), parent);
+      ConstructorSymbolTableEntry* entry = new ConstructorSymbolTableEntry(left->getstring(),
+                                                                           "constructor",
+                                                                           table);
+      parent->insert(entry);
+      
+      if(right) right->generateSymbolTable(table);
+    }
 };
 
 class NodeMethodDec : public Node
 {
   public:
-    NodeMethodDec(Node* lf=0, Node* md=0, Node* rt=0) : Node(lf, rt)
-    {
-      middle = md;
-    }
+    NodeMethodDec(Node* lf, Node* rt) : Node(lf, rt) {}
 
     virtual void prettyPrint(ostream* out)
     {
       *out << "Method Declaration:" << endl;
       if(left) left->prettyPrint(out);
-      if(middle) middle->prettyPrint(out);
       if(right) right->prettyPrint(out);
       *out << "END Method Declaration" << endl;
     }
 
-  protected:
-    Node* middle;
+    virtual void generateSymbolTable(SymbolTable* parent)
+    {
+      SymbolTable* table = new SymbolTable(right->getstring(),
+                                           parent);
+      MethodSymbolTableEntry* entry = new MethodSymbolTableEntry(right->getstring(),
+                                                                left ? 
+                                                                left->getstring() :
+                                                                "void",
+                                                                table);
+      parent->insert(entry);
+      
+      
+    }
 };
 
 class NodeParameterList : public Node
@@ -709,6 +779,11 @@ class NodeTemp : public Node
     {
       left->prettyPrint(out);
       right->prettyPrint(out);
+    }
+
+    virtual string getstring() const
+    {
+      return left->getstring();
     }
 };
 
