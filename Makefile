@@ -13,26 +13,26 @@ LFLAGS=--warn
 
 .PHONY : clean test tarball
 
-program4 : program4.tab.cpp program4.tab.hpp program4_lex.cpp program4.cpp \
+program5 : program5.tab.cpp program5.tab.hpp program5_lex.cpp program5.cpp \
            node.hpp symbolTable.hpp symbolTableEntry.hpp
-	$(CXX) $(CXXFLAGS) program4.cpp program4.tab.cpp program4_lex.cpp -o program4
+	$(CXX) $(CXXFLAGS) program5.cpp program5.tab.cpp program5_lex.cpp -o program5
 
-program4.tab.cpp : program4.ypp node.hpp
-	$(YACC) $(YFLAGS) program4.ypp
+program5.tab.cpp : program5.ypp node.hpp
+	$(YACC) $(YFLAGS) program5.ypp
 
-program4_lex.cpp : program4.lpp node.hpp
-	$(LEXXX) $(LFLAGS) program4.lpp
+program5_lex.cpp : program5.lpp node.hpp
+	$(LEXXX) $(LFLAGS) program5.lpp
 
 clean :
-	/bin/rm -f program4_lex.cpp
-	/bin/rm -f program4
-	/bin/rm -f program4.tab.cpp
-	/bin/rm -f program4.tab.hpp
-	/bin/rm -f program4.output
+	/bin/rm -f program5_lex.cpp
+	/bin/rm -f program5
+	/bin/rm -f program5.tab.cpp
+	/bin/rm -f program5.tab.hpp
+	/bin/rm -f program5.output
 
-test : program4
-	./program4 < testfile.txt
+test : program5
+	./program5 < testfile.txt
 
 tarball : 
-	tar -czvf program4.tar program4.lpp program4.cpp node.hpp program4.ypp \
-	Makefile program4.odt
+	tar -czvf program5.tar program5.lpp program5.cpp node.hpp program5.ypp \
+	Makefile program5.odt symbolTable.hpp symbolTableEntry.hpp

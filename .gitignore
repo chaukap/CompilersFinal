@@ -8,3 +8,5 @@ program4_lex.cpp
 program4.output
 program4.tab.cpp
 program4.tab.hpp
+.vscode
+
