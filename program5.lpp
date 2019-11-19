@@ -1,0 +1,406 @@
+/* program2.lpp
+ * Chandler Haukap
+ * 10/5/19
+ * COSC 4785
+ *  
+ * Flex file. 
+ */
+
+%option outfile="program5_lex.cpp"
+%option noyywrap
+%option yylineno
+
+%x COMMENT_STATE
+%x CPLUSCOMMENT_STATE
+%x ERROR_STATE
+
+
+%{
+#include<iostream>
+#include "node.hpp"
+#include"program5.tab.hpp"
+
+using std::cout;
+using std::endl;
+using std::cerr;
+
+/* true if there is a value associated with the lexeme */
+bool hasValue = false;
+int row = 1;
+int column = 1;
+
+/* lastLength should only be used internally. */
+int lastLength = 0;
+/* The number of errors encountered so far */
+int errorCount = 0;
+
+void yyerror(const char *string)
+{
+  cerr << string << endl;
+  return;
+}
+%}
+
+%%
+
+[0-9]+	{
+  yylval.ttype=new Node;
+  yylval.ttype->setval(atoi(yytext));
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = true;
+  return NUM;
+  }
+
+==	{
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return EQ;
+  }
+
+!=	{
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return NEQ;
+  }
+
+>	{
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return GT;
+  }
+
+\<   {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return LT;
+  }
+
+>=  {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return GEQ;
+  }
+
+\<=	{
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return LEQ;
+  }
+
+&&  {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return AND;
+  }
+
+\|\|    {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return OR;
+  }
+
+!   {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return NOT;
+  }
+
+\+    {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return PLUS;
+  }
+
+-    {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return MINUS;
+  }
+
+\*    {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return TIMES;
+  }
+
+\/    {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return DIV;
+  }
+
+\%  {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return MOD;
+  }
+
+;	{
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return SEMI;
+  }
+
+=   {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return ASSIGN;
+  }
+
+\.	{
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return DOT;
+  }
+
+void	{
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return VOID;
+  }
+
+class	{
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return CLASS;
+  }
+
+new	{
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return NEW;
+  }
+
+print   {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return PRINT;
+  }
+
+read   {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return READ;
+  }
+
+return   {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return RETURN;
+  }
+
+else   {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return ELSE;
+  }
+
+null   {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return NULLT;
+  }
+
+this   {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return THIS;
+  }
+
+if   {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return IF;
+  }
+
+while   {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return WHILE;
+  }
+
+int {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return INT;
+  }
+
+[a-zA-Z_][_0-9a-zA-Z]*	{
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = true;
+  return IDENT;
+  }
+
+\n	{
+  column = 1;
+  lastLength = 0;
+  row++;
+  hasValue = false;
+  }
+
+" " {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  }
+
+\t	{
+  column += lastLength;
+  lastLength = 8 - (column % 8);
+  hasValue = false;
+  }
+
+\{  {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return LBRACE;
+  }
+
+\}  {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return RBRACE;
+  }
+
+\)  {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return RPAREN;
+  }
+
+\(  {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return LPAREN;
+  }
+
+\[   {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return LBRACK;
+  }
+
+\]  {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return RBRACK;
+  }
+
+,   {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  return COMMA;
+  }
+
+.	{
+  errorCount++;
+  unput(yytext[0]);
+  BEGIN(ERROR_STATE);
+  hasValue = false;
+  if(errorCount > 20){
+      return ERRORS;
+  }
+  }
+
+<ERROR_STATE>.    {
+  cout << "Unknown character (" << yytext << ") at (" << row 
+       << ", " << column  << ")" << endl;
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = true;
+  BEGIN(0);
+  }    
+
+<ERROR_STATE>.[a-zA-Z_][0-9a-zA-Z_]*   {
+  cout << "Unknown word (" << yytext << ") at (" << row 
+       << ", " << column  << ")" << endl;
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = true;
+  BEGIN(0);
+  }
+
+\/\/  {
+  column += lastLength;
+  lastLength = 0;
+  hasValue = false;
+  BEGIN(CPLUSCOMMENT_STATE);
+  }
+
+<CPLUSCOMMENT_STATE>. {
+  hasValue = false;
+  }
+
+<CPLUSCOMMENT_STATE>\n {
+  column = 1;
+  row++;
+  hasValue = false;
+  BEGIN(0);
+  }
+
+\/\* {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  BEGIN(COMMENT_STATE);
+  }
+
+<COMMENT_STATE>. {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  }
+
+<COMMENT_STATE>\n    {
+  column = 1;
+  lastLength = 0;
+  hasValue = false;
+  row++;
+  }
+
+<COMMENT_STATE>\*\/  {
+  column += lastLength;
+  lastLength = yyleng;
+  hasValue = false;
+  BEGIN(0);
+  }
+
+%%
