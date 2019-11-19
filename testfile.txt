@@ -4,10 +4,15 @@ class testy2
     int[] z;
     testy1[][] asdf;
 
-    testy2(int y) {a = y;}
-
-    void funt(int a, int y, int e)
+    testy2(int y) 
     {
+        int a;
+        a = y;
+    }
+
+    void funt(asdf y, int x, jsadgf z)
+    {
+        int hasdf;
         h = 0;
         return h;
     }
@@ -16,4 +21,22 @@ class testy2
 class testy1
 {
     int x;
+
+    testy1(int x, int y, typey var)
+    {
+        int t;
+    }
+
+    int c(int y)
+    {
+        int testy1FunctVariable;
+        {
+            int innerBLOCK;
+        }
+    }
+}
+
+class testy3
+{
+    type thisIsAtesty3Variable;
 }

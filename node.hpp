@@ -95,6 +95,12 @@ class Node
       return right;
     }
 
+    virtual void addSValToVector(vector<string>* vec)
+    {
+      if(left) left->addSValToVector(vec);
+      if(right) right->addSValToVector(vec);
+    }
+
     virtual void print(ostream *out = 0){
       if(left) left->print(out);
       if(right) right->print(out);
@@ -542,13 +548,27 @@ class NodeConstructorDec : public Node
 
     virtual void generateSymbolTable(SymbolTable* parent)
     {
-      SymbolTable* table = new SymbolTable(left->getstring(), parent);
+      vector<string>* paramList = 0;
+      string blockName = left->getstring();
+
+      if(right->getleft()){
+        paramList = new vector<string>();
+        right->getleft()->addSValToVector(paramList);
+      }
+
       ConstructorSymbolTableEntry* entry = new ConstructorSymbolTableEntry(left->getstring(),
                                                                            "constructor",
-                                                                           table);
+                                                                           paramList);
       parent->insert(entry);
+
+      for(int i = 0; i < paramList->size(); ++i)
+      {
+        blockName += " " + paramList->at(i);
+      }
+
+      right->getright()->setval(blockName);
       
-      if(right) right->generateSymbolTable(table);
+      right->getright()->generateSymbolTable(parent);
     }
 };
 
@@ -567,16 +587,24 @@ class NodeMethodDec : public Node
 
     virtual void generateSymbolTable(SymbolTable* parent)
     {
-      SymbolTable* table = new SymbolTable(right->getstring(),
-                                           parent);
+      vector<string>* paramList = 0;
+
+      if(right->getright()->getleft()){
+        paramList = new vector<string>();
+        right->getright()->getleft()->addSValToVector(paramList);
+      }
+      
       MethodSymbolTableEntry* entry = new MethodSymbolTableEntry(right->getstring(),
                                                                 left ? 
                                                                 left->getstring() :
                                                                 "void",
-                                                                table);
+                                                                paramList);
+
       parent->insert(entry);
+
+      right->getright()->getright()->setval(right->getstring());
       
-      
+      right->generateSymbolTable(parent);
     }
 };
 
@@ -606,6 +634,11 @@ class NodeParameter : public Node
       if(right) right->prettyPrint(out);
       *out << endl << "END Parameter" << endl;
     }
+
+    virtual void addSValToVector(vector<string>* vec)
+    {
+      vec->push_back(left->getstring());
+    }
 };
 
 class NodeBlock : public Node
@@ -618,6 +651,12 @@ class NodeBlock : public Node
       *out << "Block:" << endl;
       if(left) left->prettyPrint(out);
       *out << "END block" << endl;
+    }
+
+    virtual void generateSymbolTable(SymbolTable* parent)
+    {
+      SymbolTable* table = new SymbolTable(sval.empty() ? "Inner Block" : sval, parent);
+      if(left) left->generateSymbolTable(table);
     }
 };
 
@@ -785,6 +824,12 @@ class NodeTemp : public Node
     {
       return left->getstring();
     }
+};
+
+class NodeParamListAndBlock : public Node
+{
+  public:
+    NodeParamListAndBlock(Node* paramList, Node* Block) : Node(paramList, Block) {}
 };
 
 #endif

@@ -32,7 +32,7 @@ void symbolTableTest();
 
 int main()
 {
-  baseSymbolTable = new SymbolTable();
+  baseSymbolTable = new SymbolTable("Classes");
 
   yyparse();
   cout << endl << endl;
