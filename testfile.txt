@@ -1,42 +1,31 @@
 class testy2
 {
-    int y; 
-    int[] z;
-    testy1[][] asdf;
+    int[][] k;
 
-    testy2(int y) 
+    testy2(int h)
     {
-        int a;
-        a = y;
-    }
-
-    void funt(asdf y, int x, jsadgf z)
-    {
-        int hasdf;
-        h = 0;
-        return h;
-    }
-}
-
-class testy1
-{
-    int x;
-
-    testy1(int x, int y, typey var)
-    {
-        int t;
-    }
-
-    int c(int y)
-    {
-        int testy1FunctVariable;
-        {
-            int innerBLOCK;
+        int j;
+        int[] y;
+        if(1 && j){
+            int y;
         }
+        k = new int[9];
+        k[8][7] = 0;
+        return;
     }
-}
 
-class testy3
-{
-    type thisIsAtesty3Variable;
+    testy2()
+    {
+        return;
+    }
+
+    void main()
+    {
+        int y;
+        y = 8;
+    }
+
+    int funct(int y){
+        return 8;
+    }
 }

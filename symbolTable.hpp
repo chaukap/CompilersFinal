@@ -19,6 +19,7 @@ class SymbolTable
     /* Constructor for class and function variables. */
     SymbolTable(string classOrFunctionName, SymbolTable* parentTable=0)
     {
+      parent = 0;
       if(parentTable) {
         parent = parentTable;
         parent->registerChild(this);
@@ -29,6 +30,7 @@ class SymbolTable
     /* Constructor for blocks */
     SymbolTable(SymbolTable* parentTable=0)
     {
+      parent = 0;
       if(parentTable) {
         parent = parentTable;
         parent->registerChild(this);
@@ -42,14 +44,28 @@ class SymbolTable
       children.push_back(child);
     }
 
-    void insert(SymbolTableEntry* entry)
+    /* Insert an entry into the table.
+
+       @param entry the symbol table entry 
+
+       @return true if the identifier didn't already exist.
+       @return false if the identifier did already exist.
+    */
+    bool insert(SymbolTableEntry* entry)
     {
-      table[entry->getIdentifier()] = entry;
+      if(table.find(entry->getIdentifier()) == table.end()){
+        table[entry->getIdentifier()] = entry;
+        return true;
+      } else {
+        return false;
+      }
     }
 
-    virtual SymbolTableEntry* find(string identifier)
+    virtual SymbolTableEntry* find(string identifier,
+                                   vector<string>* parameterList = 0)
     {
       auto entry = table.find(identifier);
+
       if(entry != table.end()){
         return entry->second;
       } else if (parent) {
@@ -57,6 +73,30 @@ class SymbolTable
       } else {
         return 0;
       }
+    }
+
+    virtual bool hasOneMain(){
+      bool mainFound = false;
+      for(auto child = 0; child < children.size(); child++)
+      {
+        if(children[child]->find("main < >")){
+          if(mainFound){
+            // If main was already found we have 2 mains
+            cout << "Type error: Multiple definitions of main." << endl;
+            return false;
+          } else {
+            mainFound = true;
+          }
+        }
+      }
+
+      // If we have one and only one main.
+        if(mainFound){
+          return true;
+        } else {
+          cout << "Type error: No definition for main found." << endl;
+          return false;
+        }
     }
 
     virtual void print(ostream* out, int spaces)
@@ -81,6 +121,14 @@ class SymbolTable
       {
         children[child]->print(out, spaces + 2);
       }
+    }
+
+    string getClassName()
+    {
+      if(parent->parent){
+        return parent->getClassName();
+      }
+      return name;
     }
 
   protected:

@@ -6,7 +6,7 @@
  * Flex file. 
  */
 
-%option outfile="program5_lex.cpp"
+%option outfile="program6_lex.cpp"
 %option noyywrap
 %option yylineno
 
@@ -18,7 +18,7 @@
 %{
 #include<iostream>
 #include "node.hpp"
-#include"program5.tab.hpp"
+#include"program6.tab.hpp"
 
 using std::cout;
 using std::endl;

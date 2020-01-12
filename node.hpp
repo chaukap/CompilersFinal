@@ -24,6 +24,8 @@ using std::ostream;
 using std::cout;
 
 extern SymbolTable* baseSymbolTable;
+extern int row;
+extern int column;
 
 class Node
 {
@@ -72,8 +74,8 @@ class Node
     }
 
     void reset() {
-      yyline=yycol=nextline=nextcol=1;
-      sval.clear();
+      line = row;
+      col = column;
     }
 
     void setleft(Node *p) 
@@ -114,21 +116,69 @@ class Node
       return;
     }
 
+    /* Generate a symbol table(s) for this node and all children node.
+       This function also type checks for duplicate variable declarations */
     virtual void generateSymbolTable(SymbolTable* parent)
     {
+      //cout << "Node: Generating symbol table." << endl;
       if(left) left->generateSymbolTable(parent);
       if(right) right->generateSymbolTable(parent);
     }
 
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      //cout << "Node: Type checking" << endl;
+      if(right) right->typeCheck(parent);
+      if(left) left->typeCheck(parent);
+
+      // The default implementation doesn't need to return anything;
+      return 0;
+    }
+
+    virtual bool hasReturn()
+    {
+      if(left && right){
+        return left->hasReturn() || right->hasReturn() || false;
+      } else if(left) {
+        return left->hasReturn() || false;
+      } else if(right){
+        return right->hasReturn() || false;
+      } else {
+        return false;
+      }
+    }
+
+    virtual bool isReturnValid(string type)
+    {
+      if(left && right){
+        return left->isReturnValid(type) && right->isReturnValid(type) && true;
+      } else if(left) {
+        return left->isReturnValid(type) && true;
+      } else if(right){
+        return right->isReturnValid(type) && true;
+      } else {
+        return true;
+      }
+    }
+
   protected:
-    int yyline;
-    int yycol;
+    int line;
+    int col;
     int ival;
     double dval;
     string sval;
-    int nextcol;// not needed?
-    int nextline;// not needed?
     Node *left,*right;
+};
+
+class NodeNull : public Node
+{
+  public:
+    NodeNull() : Node() {};
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      return new SymbolTableEntry("null", "null");
+    }
 };
 
 /* A class for errors. This class does NOTHING.
@@ -151,6 +201,350 @@ class NodeError : public Node
     }
 };
 
+class NodeOr : public Node
+{
+  public:
+    NodeOr(Node* left, Node* right) : Node(left,right) {}
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      SymbolTableEntry* entry1 = left->typeCheck(parent);
+      SymbolTableEntry* entry2 = right->typeCheck(parent);
+
+      if(!entry1 || !entry2){
+        cout << "Type error (" << line << ", " << col << "): Unknown type in "
+          << "conditional statement." << endl;
+      }
+
+      string type1 = entry1->getType();
+      string type2 = entry2->getType();
+
+      // "numeric value" means a literal integer. In this case we do not care.
+      if(type1 == "numeric value"){
+        type1 = "int";
+      }
+
+      if(type2 == "numeric value"){
+        type2 = "int";
+      }
+
+      if(type1 == "int" && type2 == "int"){
+        return new SymbolTableEntry("conditional", "int");
+      } else {
+        cout << "Type error (" << line << ", " << col << "): conditionals "
+          "require 'int' operands." << endl;
+        return 0;
+      }
+    }
+};
+
+class NodeAnd : public Node
+{
+  public:
+    NodeAnd(Node* left, Node* right) : Node(left,right) {}
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      SymbolTableEntry* entry1 = left->typeCheck(parent);
+      SymbolTableEntry* entry2 = right->typeCheck(parent);
+
+      if(!entry1 || !entry2){
+        cout << "Type error (" << line << ", " << col << "): Unknown type in "
+          << "conditional statement." << endl;
+      }
+
+      string type1 = entry1->getType();
+      string type2 = entry2->getType();
+
+      // "numeric value" means a literal integer. In this case we do not care.
+      if(type1 == "numeric value"){
+        type1 = "int";
+      }
+
+      if(type2 == "numeric value"){
+        type2 = "int";
+      }
+
+      if(type1 == "int" && type2 == "int"){
+        return new SymbolTableEntry("conditional", "int");
+      } else {
+        cout << "Type error (" << line << ", " << col << "): Conditionals "
+          "require 'int' operands." << endl;
+        return 0;
+      }
+    }
+};
+
+class NodeMod : public Node
+{
+  public:
+    NodeMod(Node* left, Node* right) : Node(left,right) {}
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      SymbolTableEntry* entry1 = left->typeCheck(parent);
+      SymbolTableEntry* entry2 = right->typeCheck(parent);
+
+      if(!entry1 || !entry2){
+        cout << "Type error (" << line << ", " << col << "): Unknown type in "
+          << "arithmatic statement." << endl;
+      }
+
+      string type1 = entry1->getType();
+      string type2 = entry2->getType();
+
+      // "numeric value" means a literal integer. In this case we do not care.
+      if(type1 == "numeric value"){
+        type1 = "int";
+      }
+
+      if(type2 == "numeric value"){
+        type2 = "int";
+      }
+
+      if(type1 == "int" && type2 == "int"){
+        return new SymbolTableEntry("arithmatic", "int");
+      } else {
+        cout << "Type error (" << line << ", " << col << "): Arithmatics "
+          "require 'int' operands." << endl;
+        return 0;
+      }
+    }
+};
+
+class NodePlus : public Node
+{
+  public:
+    NodePlus(Node* left, Node* right) : Node(left,right) {}
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      SymbolTableEntry* entry1 = left->typeCheck(parent);
+      SymbolTableEntry* entry2 = right->typeCheck(parent);
+
+      if(!entry1 || !entry2){
+        cout << "Type error (" << line << ", " << col << "): Unknown type in "
+          << "arithmatic statement." << endl;
+      }
+
+      string type1 = entry1->getType();
+      string type2 = entry2->getType();
+
+      // "numeric value" means a literal integer. In this case we do not care.
+      if(type1 == "numeric value"){
+        type1 = "int";
+      }
+
+      if(type2 == "numeric value"){
+        type2 = "int";
+      }
+
+      if(type1 == "int" && type2 == "int"){
+        return new SymbolTableEntry("arithmatic", "int");
+      } else {
+        cout << "Type error (" << line << ", " << col << "): Arithmatics "
+          "require 'int' operands." << endl;
+        return 0;
+      }
+    }
+};
+
+class NodeMinus : public Node
+{
+  public:
+    NodeMinus(Node* left, Node* right) : Node(left,right) {}
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      SymbolTableEntry* entry1 = left->typeCheck(parent);
+      SymbolTableEntry* entry2 = right->typeCheck(parent);
+
+      if(!entry1 || !entry2){
+        cout << "Type error (" << line << ", " << col << "): Unknown type in "
+          << "arithmatic statement." << endl;
+      }
+
+      string type1 = entry1->getType();
+      string type2 = entry2->getType();
+
+      // "numeric value" means a literal integer. In this case we do not care.
+      if(type1 == "numeric value"){
+        type1 = "int";
+      }
+
+      if(type2 == "numeric value"){
+        type2 = "int";
+      }
+
+      if(type1 == "int" && type2 == "int"){
+        return new SymbolTableEntry("arithmatic", "int");
+      } else {
+        cout << "Type error (" << line << ", " << col << "): Arithmatics "
+          "require 'int' operands." << endl;
+        return 0;
+      }
+    }
+};
+
+class NodeTimes : public Node
+{
+  public:
+    NodeTimes(Node* left, Node* right) : Node(left,right) {}
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      SymbolTableEntry* entry1 = left->typeCheck(parent);
+      SymbolTableEntry* entry2 = right->typeCheck(parent);
+
+      if(!entry1 || !entry2){
+        cout << "Type error (" << line << ", " << col << "): Unknown type in "
+          << "arithmatic statement." << endl;
+      }
+
+      string type1 = entry1->getType();
+      string type2 = entry2->getType();
+
+      // "numeric value" means a literal integer. In this case we do not care.
+      if(type1 == "numeric value"){
+        type1 = "int";
+      }
+
+      if(type2 == "numeric value"){
+        type2 = "int";
+      }
+
+      if(type1 == "int" && type2 == "int"){
+        return new SymbolTableEntry("arithmatic", "int");
+      } else {
+        cout << "Type error (" << line << ", " << col << "): Arithmatics "
+          "require 'int' operands." << endl;
+        return 0;
+      }
+    }
+};
+
+class NodeDivide : public Node
+{
+  public:
+    NodeDivide(Node* left, Node* right) : Node(left,right) {}
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      SymbolTableEntry* entry1 = left->typeCheck(parent);
+      SymbolTableEntry* entry2 = right->typeCheck(parent);
+
+      if(!entry1 || !entry2){
+        cout << "Type error (" << line << ", " << col << "): Unknown type in "
+          << "arithmatic statement." << endl;
+      }
+
+      string type1 = entry1->getType();
+      string type2 = entry2->getType();
+
+      // "numeric value" means a literal integer. In this case we do not care.
+      if(type1 == "numeric value"){
+        type1 = "int";
+      }
+
+      if(type2 == "numeric value"){
+        type2 = "int";
+      }
+
+      if(type1 == "int" && type2 == "int"){
+        return new SymbolTableEntry("arithmatic", "int");
+      } else {
+        cout << "Type error (" << line << ", " << col << "): Arithmatics "
+          "require 'int' operands." << endl;
+        return 0;
+      }
+    }
+};
+
+class NodeEquality : public Node
+{
+  public:
+    NodeEquality(Node* left, Node* right) : Node(left,right) {}
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      SymbolTableEntry* entry1 = left->typeCheck(parent);
+      SymbolTableEntry* entry2 = right->typeCheck(parent);
+
+      if(!entry1 || !entry2){
+        cout << "Type error (" << line << ", " << col << "): Unknown type in "
+          << "comparison." << endl;
+      }
+
+      string type1 = entry1->getType();
+      string type2 = entry2->getType();
+
+      // "numeric value" means a literal integer. In this case we do not care.
+      if(type1 == "numeric value"){
+        type1 = "int";
+      }
+
+      if(type2 == "numeric value"){
+        type2 = "int";
+      }
+
+      // ints can only be compared to ints.
+      if(type1 == "int" || type2 == "int"){
+        if(type1 == "int" && type2 == "int"){
+          return new SymbolTableEntry("equality", "int");
+        } else {
+          cout << "Type error (" << line <<", "<< col << "): An 'int' can only"
+            << " be compared to another 'int'." << endl;
+            return 0;
+        }
+      }
+
+      // If we made it this far we can compare anything.
+      return new SymbolTableEntry("comparison", type1);
+    }
+};
+
+class NodeNotEquality : public Node
+{
+  public:
+    NodeNotEquality(Node* left, Node* right) : Node(left,right) {}
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      SymbolTableEntry* entry1 = left->typeCheck(parent);
+      SymbolTableEntry* entry2 = right->typeCheck(parent);
+
+      if(!entry1 || !entry2){
+        cout << "Type error (" << line << ", " << col << "): Unknown type in "
+          << "comparison." << endl;
+      }
+
+      string type1 = entry1->getType();
+      string type2 = entry2->getType();
+
+      if(type1 == "numeric value"){
+        type1 = "int";
+      }
+
+      if(type2 == "numeric value"){
+        type2 = "int";
+      }
+
+      // ints can only be compared to ints.
+      if(type1 == "int" || type2 == "int"){
+        if(type1 == "int" && type2 == "int"){
+          return new SymbolTableEntry("equality", "int");
+        } else {
+          cout << "Type error (" << line << ", " << col << "): 'int' can only"
+            << " be compared to another 'int'." << endl;
+            return 0;
+        }
+      }
+
+      // If we made it this far we can compare anything.
+      return new SymbolTableEntry("comparison", type1);
+    }
+};
+
 class NodeNegative : public Node
 {
   public:
@@ -168,6 +562,12 @@ class NodeNegative : public Node
         left->prettyPrint(out);
       }
       return;
+    }
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      //cout << "NodeNegative: Type checking. " << endl;
+      return left->typeCheck(parent);
     }
 };
 
@@ -194,6 +594,7 @@ class nodeNum : public Node
     nodeNum(int i)
     {
       ival=i;
+      sval = std::to_string(ival);
     };
 
     virtual void print(ostream* out)
@@ -205,6 +606,11 @@ class nodeNum : public Node
     virtual void prettyPrint(ostream *out = 0)
     {
       *out << " " << ival;
+    }
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      return new SymbolTableEntry(sval, "numeric value");
     }
 };
 
@@ -256,6 +662,18 @@ class NodeIdentifier : public Node
       *out << " " << identifier;
     }
 
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      SymbolTableEntry* thisEntry = parent->find(sval);
+      if(thisEntry){
+        return thisEntry;
+      } else {
+        cout << "Type error (" << line << ", " << col 
+          << "): Unknown identifier " << identifier << endl;
+        return 0;
+      }
+    }
+
     string identifier;
 };
 
@@ -280,9 +698,18 @@ class nodeVardec : public Node
 
     virtual void generateSymbolTable(SymbolTable* parent)
     {
+      //cout << "nodeVardec: Generating symbol table." << endl;
       SymbolTableEntry* entry = new SymbolTableEntry(right->getstring(),
                                                      left->getstring());
-      parent->insert(entry);
+
+      if(!parent->insert(entry)){
+        /* If insert failed there must alreay be an entry with the 
+           same identifier */
+        cout << "Type error (" << line << ", " << col 
+          << "): '" << entry->getIdentifier() << "' declared twice"
+          << " in the same scope." << endl 
+          << "\tIgnoring the second declaration." << endl;
+      }
     } 
 };
 
@@ -363,6 +790,37 @@ class nodeComparatorExp : public Node
           break;
       }
     }
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      SymbolTableEntry* entry1 = left->typeCheck(parent);
+      SymbolTableEntry* entry2 = right->typeCheck(parent);
+
+      if(!entry1 || !entry2){
+        cout << "Type error (" << line << ", " << col << "): Unknown type in "
+          << "comparison." << endl;
+      }
+
+      string type1 = entry1->getType();
+      string type2 = entry2->getType();
+
+      // "numeric value" means a literal integer. In this case we do not care.
+      if(type1 == "numeric value"){
+        type1 = "int";
+      }
+
+      if(type2 == "numeric value"){
+        type2 = "int";
+      }
+
+      if(type1 == "int" && type2 == "int"){
+        return new SymbolTableEntry("comparison", "int");
+      } else {
+        cout << "Type error (" << line << ", " << col << "): Comparisons "
+          "require 'int' operands." << endl;
+        return 0;
+      }
+    }
 };
 
 class nodeDot : public Node
@@ -375,6 +833,78 @@ class nodeDot : public Node
       if(left) left->prettyPrint(out);
       *out << ".";
       if(right) right->prettyPrint(out);
+    }
+
+    /* This was by far the hardest algorithm to implement. 
+     * Here is pseudocode to help understand it:
+     * 
+     * 1) Get the entry for the variable to the left of this one.
+     * 2) If the entry is a class (i.e. it has a symbol table) then
+     *    find this node's entry in it.
+     * 3) If this node is a variable (i.e. has no symbol table) then
+     *    it must be in aother class. Find it's symbol table entry by searching
+     *    for the type.
+     * 4) If we could find an entry in either step 2 or 3 return it. 
+     *    Otherwise, log an error and return 0.
+     */
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      //cout << "NodeDot: Type checking." << endl;
+      SymbolTableEntry* entry = 0; 
+      SymbolTableEntry* myIdent = 0;
+      entry = left->typeCheck(parent);
+
+      // `entry` is either a class or a variable
+      if(entry){
+        // If entry is a class we need to find the variable entry.
+        if(entry->getSymbolTable()) {
+          myIdent = entry->getSymbolTable()->find(right->getstring());
+
+        // If entry is a variable we need to find the class entry,
+        // THEN the variable entry.
+        } else {
+          myIdent = parent->find(entry->getType());
+          if(myIdent->getSymbolTable()){
+            myIdent = myIdent->getSymbolTable()->find(right->getstring());
+          }
+        }
+      }
+
+      if(myIdent){
+        return myIdent;
+      } else {
+        cout << "Type error (" << line << ", " << col 
+          << "): Unrecognized identifier '" << right->getstring()
+          << "'" << endl;
+        return 0;
+      }
+    }
+};
+
+class NodeNameBrack : public Node
+{
+  public:
+    NodeNameBrack(Node* name, Node* bracket) : Node(name, bracket) {}
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      right->typeCheck(parent);
+      SymbolTableEntry* thisEntry = left->typeCheck(parent);
+      
+      if(!thisEntry){
+        return 0;
+      }
+
+      string thisType = thisEntry->getType();
+      int size = thisType.size();
+
+      if(size < 2 || thisType.substr(size - 2, size - 1) != "[]"){
+        cout << "Type error (" << line << ", " << col << "): Too many "
+          << "dimensions in bracket expression." << endl;
+        return 0;
+      }
+
+      return new SymbolTableEntry("name", thisType.substr(0, thisType.size() - 2));
     }
 };
 
@@ -390,28 +920,193 @@ class nodeBracketExp : public Node
       *out << "]";
       return;
     }
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      SymbolTableEntry* thisEntry = left->typeCheck(parent);
+
+      if(!thisEntry){
+        return 0;
+      }
+
+      if(thisEntry->getType() == "numeric value"){
+        return new SymbolTableEntry("int", "int");
+      }
+
+      if(thisEntry->getType() != "int"){
+        cout << "Type error (" << line << ", " << col << "): int value "
+          << "required inside brackets.";
+        return 0;
+      }
+
+      return thisEntry;
+    }
 };
 
 class nodeNewExp : public Node
 {
   public:
-    nodeNewExp(Node* lf, Node* mid=0, Node* rt=0) : Node(lf,rt) 
-    {
-      middle = mid; 
-    }
+    nodeNewExp(Node* lf, Node* rt) : Node(lf,rt) {}
 
     virtual void prettyPrint(ostream* out = 0)
     {
       *out << "new ";
       if(left) left->prettyPrint(out);
-      if(middle) middle->prettyPrint(out);
       if(right) right->prettyPrint(out);
       *out << endl;
       return;
     }
 
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      Node* brackExps = right;
+      SymbolTableEntry* type = left->typeCheck(parent);
+
+      if(!type){
+        // I could print another error here, but there's no point.
+        return 0;
+      }
+
+      string typeString = type->getType();
+      if(typeString != "int"){
+        typeString = type->getIdentifier();
+      }
+
+      // Add up all of the brackets
+      while(brackExps->getleft()){
+        // Can't forget to type check the expressions inside the brackets.
+        // If the expressions error out I'll still let this function proceed.
+        // Why not?
+        brackExps->typeCheck(parent);
+        typeString += "[]";
+        brackExps = brackExps->getleft();
+      }
+
+      return new SymbolTableEntry("issa expression", typeString);
+    }
+};
+
+class NodeNewExpBrack : public Node
+{
+  public:
+    NodeNewExpBrack(Node* newType, Node* brackExp, Node* multiBrack) 
+                    : Node(newType, multiBrack)
+    {
+      middle = brackExp;
+    }
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      Node* brackExps = middle;
+      Node* multiBrack = right;
+      SymbolTableEntry* type = left->typeCheck(parent);
+      bool isOneEmpty = false;
+
+      if(!type){
+        // I could print another error here, but there's no point.
+        return 0;
+      }
+
+      string typeString = type->getType();
+      if(typeString != "int"){
+        typeString = type->getIdentifier();
+      }
+
+      // Add up all of the brackets
+      while(brackExps->getleft()){
+        // Can't forget to type check the expressions inside the brackets.
+        // If the expressions error out I'll still let this function proceed.
+        // Why not?
+        brackExps->typeCheck(parent);
+        typeString += "[]";
+        brackExps = brackExps->getleft();
+      }
+
+      while(multiBrack){
+        typeString += "[]";
+        multiBrack = multiBrack->getleft();
+        if(isOneEmpty){
+          cout << "Type error (" << line << ", " << col << "): only one "
+            << "bracket can be empty." << endl;
+          return 0;
+        }
+        isOneEmpty = true;
+      }
+
+      return new SymbolTableEntry("issa expression", typeString);
+    }
+
   protected:
     Node* middle;
+};
+
+class NodeNewBrack : public Node
+{
+  public: 
+    NodeNewBrack(Node* newType, Node* bracks) : Node(newType, bracks) {}
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      Node* multiBrack = right;
+      SymbolTableEntry* type = left->typeCheck(parent);
+
+      if(!type){
+        // I could print another error here, but there's no point.
+        return 0;
+      }
+
+      string typeString = type->getType();
+      if(typeString != "int"){
+        typeString = type->getIdentifier();
+      }
+
+      while(multiBrack){
+        typeString += "[]";
+        multiBrack = multiBrack->getleft();
+      }
+
+      return new SymbolTableEntry("issa expression", typeString);
+    }
+};
+
+class NodeNewConstructor : public Node
+{
+  public:
+    NodeNewConstructor(Node* identifier, Node* paramList) 
+                            : Node(identifier, paramList) {}
+    
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      SymbolTableEntry* entry = parent->find(left->getstring());
+      SymbolTable* myTable;
+      string type;
+
+      // If the class doesn't exist
+      if(!entry || !entry->getSymbolTable()){
+        cout << "Type error (" <<line<< ", " <<col<< "): Unknown constructor '"
+          << left->getstring() << "'" << endl;
+      }
+
+      myTable = entry->getSymbolTable();
+      entry = right->typeCheck(parent);
+
+      // Concatinate parameters string;
+      type += left->getstring();
+      type += " ";
+      if(entry){
+        type += entry->getType();
+      }
+
+      if(myTable->find(type)){
+        // Return a temporary entry where the type is the identifier
+        return new SymbolTableEntry("constructor", left->getstring());
+      } else {
+        // Couldn't find a constructor entry that takes these arguments
+        cout << "Type error (" << line << ", " << col 
+          << "): Couldn't find constructor '" << type << "'" << endl;
+        return 0;
+      }
+    }
 };
 
 class NodeNot : public Node
@@ -424,6 +1119,11 @@ class NodeNot : public Node
       *out << "!";
       if(left) left->prettyPrint(out);
       return;
+    }
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      return left->typeCheck(parent);
     }
 };
 
@@ -438,6 +1138,29 @@ class NodeFunctionCall : public Node
       *out << "( ";
       if(right) right->prettyPrint(out);
       *out << " )" << endl;
+    }
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      string type;
+
+      // Get the arguments
+      SymbolTableEntry* arglist = right->typeCheck(parent);
+
+      // Concatinate the string;
+      type += left->getstring();
+      type += " ";
+      if(arglist){
+        type += arglist->getType();
+      }
+
+      if(parent->find(type)){
+        return parent->find(type);
+      } else {
+        cout << "Type error (" << line << ", " << col 
+          << "): Invalid function call : " << type << endl;
+        return 0;
+      }
     }
 };
 
@@ -456,14 +1179,36 @@ class NodeClass : public Node
 
     virtual void generateSymbolTable(SymbolTable* parent)
     {
-      SymbolTable* table = new SymbolTable(left->getstring(), parent);
+      //cout << "NodeClass: Generating symbol table." << endl;
+      myTable = new SymbolTable(left->getstring(), parent);
       ClassSymbolTableEntry* entry = new ClassSymbolTableEntry(left->getstring(),
                                                                "class", 
-                                                               table);
-      parent->insert(entry);
+                                                               myTable);
 
-      if(right) right->generateSymbolTable(table);
+      if(!parent->insert(entry)){
+        /* If insert failed there must alreay be an entry with the 
+           same identifier */
+        cout << "Type error (" << line << ", " << col 
+          << "): '" << entry->getIdentifier() << "' declared twice"
+          << " in the same scope." << endl 
+          << "\tIgnoring the second declaration." << endl;
+      }
+
+      if(right) right->generateSymbolTable(myTable);
     }
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      //cout << "NodeClass: Type checking." << endl;
+      if(myTable && right) {
+        return right->typeCheck(myTable);
+      } else {
+        return 0;
+      }
+    }
+
+  private:
+    SymbolTable* myTable;
 };
 
 class NodeClassBody : public Node
@@ -485,9 +1230,21 @@ class NodeClassBody : public Node
 
     virtual void generateSymbolTable(SymbolTable* parent)
     {
+      //cout << "NodeClassBody: Generating symbol table." << endl;
       if(left) left->generateSymbolTable(parent);
       if(right) right->generateSymbolTable(parent);
       if(middle) middle->generateSymbolTable(parent);
+    }
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      //cout << "NodeClassBody: Type checking." << endl;
+      if(left) left->typeCheck(parent);
+      if(right) right->typeCheck(parent);
+      if(middle) middle->typeCheck(parent);
+
+      // Classes don't really need to return anything here.
+      return 0;
     }
 
   protected:
@@ -530,6 +1287,21 @@ class NodeNewType : public Node
 {
   public:
     NodeNewType(Node* ident=0) : Node(ident) {}
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      if(!left){
+        return new SymbolTableEntry("issa int", "int");
+      } else {
+        SymbolTableEntry* thisEntry = parent->find(left->getstring());
+        if(!thisEntry){
+          cout << "Type error (" << line << ", " << col << "): Unknown type '"
+            << left->getstring() << "'" << endl; 
+          return 0;
+        }
+        return thisEntry;
+      }
+    }
 };
 
 class NodeConstructorDec : public Node
@@ -548,28 +1320,52 @@ class NodeConstructorDec : public Node
 
     virtual void generateSymbolTable(SymbolTable* parent)
     {
+      //cout << "NodeConstructorDec: Generating symbol table." << endl;
       vector<string>* paramList = 0;
       string blockName = left->getstring();
+      blockName += " <";
 
-      if(right->getleft()){
+      if(right->getleft())
+      {
         paramList = new vector<string>();
         right->getleft()->addSValToVector(paramList);
+        
+        for(int i = 0; i < paramList->size(); ++i)
+        {
+          blockName += " " + paramList->at(i);
+        }
+      }
+      blockName += " >";
+
+      ConstructorSymbolTableEntry* entry = new ConstructorSymbolTableEntry(blockName,
+                                                                           "constructor");
+      if(parent->insert(entry)){
+        right->setval(blockName);
+      } else {
+        /* If insert failed there must alreay be an entry with the 
+           same identifier */
+        cout << "Type error (" << line << ", " << col 
+          << "): '" << entry->getIdentifier() << "' declared twice"
+          << " in the same scope." << endl 
+          << "\tIgnoring the second declaration." << endl;
       }
 
-      ConstructorSymbolTableEntry* entry = new ConstructorSymbolTableEntry(left->getstring(),
-                                                                           "constructor",
-                                                                           paramList);
-      parent->insert(entry);
-
-      for(int i = 0; i < paramList->size(); ++i)
-      {
-        blockName += " " + paramList->at(i);
-      }
-
-      right->getright()->setval(blockName);
-      
-      right->getright()->generateSymbolTable(parent);
+      right->generateSymbolTable(parent);
     }
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      if(hasReturn()){
+        cout << "Type error (" << line << ", " << col << "): Constructors"
+          << " are not allowed to have non-void return statements." << endl;
+      }
+      //cout << "NodeConstructorDec: Type checking." << endl;
+      if(right) {
+        return right->typeCheck(parent);
+      } else {
+        return 0;
+      }
+    }    
 };
 
 class NodeMethodDec : public Node
@@ -587,24 +1383,53 @@ class NodeMethodDec : public Node
 
     virtual void generateSymbolTable(SymbolTable* parent)
     {
+      //cout << "NodeMethodDec: Generating symbol table." << endl;
       vector<string>* paramList = 0;
+      string blockName = right->getstring();
 
+      blockName += " <";
       if(right->getright()->getleft()){
         paramList = new vector<string>();
         right->getright()->getleft()->addSValToVector(paramList);
+
+        for(int i = 0; i < paramList->size(); ++i)
+        {
+          blockName += " " + paramList->at(i);
+        }
       }
+      blockName += " >";
       
-      MethodSymbolTableEntry* entry = new MethodSymbolTableEntry(right->getstring(),
+      MethodSymbolTableEntry* entry = new MethodSymbolTableEntry(blockName,
                                                                 left ? 
                                                                 left->getstring() :
-                                                                "void",
-                                                                paramList);
+                                                                "void");
 
-      parent->insert(entry);
+      if(parent->insert(entry)){
+        right->getright()->setval(blockName);
+      } else {
+        /* If insert failed there must already be an entry with the 
+           same identifier */
+        cout << "Type error (" << line << ", " << col 
+          << "): '" << entry->getIdentifier() << "' declared twice"
+          << " in the same scope." << endl 
+          << "\tIgnoring the second declaration." << endl;
+      }
 
-      right->getright()->getright()->setval(right->getstring());
-      
       right->generateSymbolTable(parent);
+    }
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      SymbolTableEntry* thisEntry = right->typeCheck(parent);
+      if(!left){
+        if(hasReturn()){
+          cout << "Type error (" << line << ", " << col << "): Void function "
+            << "cannot return a non-void value." << endl;
+        }
+      } else {
+        isReturnValid(left->getstring());
+      }
+      return thisEntry;
     }
 };
 
@@ -625,7 +1450,7 @@ class NodeParameterList : public Node
 class NodeParameter : public Node
 {
   public:
-    NodeParameter(Node* lf, Node* rt) : Node(lf, rt) {}
+    NodeParameter(Node* type, Node* identifier) : Node(type, identifier) {}
 
     virtual void prettyPrint(ostream* out)
     {
@@ -639,25 +1464,48 @@ class NodeParameter : public Node
     {
       vec->push_back(left->getstring());
     }
+
+    virtual void generateSymbolTable(SymbolTable* parent){
+      SymbolTableEntry* newEntry = new SymbolTableEntry(right->getstring(), 
+                                                        left->getstring());
+
+      parent->insert(newEntry);
+    }
 };
 
 class NodeBlock : public Node
 {
   public: 
-    NodeBlock(Node* block) : Node(block){}
+    NodeBlock(Node* block) : Node(block)
+    {
+      myTable = 0;
+    }
 
     virtual void prettyPrint(ostream* out)
     {
-      *out << "Block:" << endl;
       if(left) left->prettyPrint(out);
       *out << "END block" << endl;
     }
 
     virtual void generateSymbolTable(SymbolTable* parent)
     {
-      SymbolTable* table = new SymbolTable(sval.empty() ? "Inner Block" : sval, parent);
-      if(left) left->generateSymbolTable(table);
+      //cout << "NodeBlock: Generating symbol table." << endl;
+      myTable = new SymbolTable(sval.empty() ? "Inner Block" : sval, parent);
+      left->generateSymbolTable(myTable);
     }
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      //cout << "NodeBlock: Type Checking " << endl;
+      if(myTable) {
+        return left->typeCheck(myTable);
+      } else {
+        return 0;
+      }
+    }
+  
+  private:
+    SymbolTable* myTable;
 };
 
 class NodeAssign : public Node
@@ -677,6 +1525,44 @@ class NodeAssign : public Node
       }
       *out << endl << "END assignment" << endl;
     }
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      //cout << "NodeAssign: Type checking" << endl;
+
+      SymbolTableEntry* leftEntry = left->typeCheck(parent);
+      SymbolTableEntry* rightEntry = right->typeCheck(parent);
+
+      if(!leftEntry || !rightEntry){
+        cout << "Type error (" << line << ", " << col 
+          << "): Unknown type in assignment." << endl;
+        return 0;
+      }
+
+      string leftType = leftEntry->getType();
+      string rightType = rightEntry->getType();
+
+      // We cannot assign to null or to a literal value.
+      if(leftType == "null" || leftType == "numeric value"){
+        cout << "Type error (" << line << ", " << col 
+          << "): Invalid lvalue in assignment." << endl;
+        return 0;
+      }
+
+      // "numeric value" means a literal integer. In this case we do not care.
+      if(rightType == "numeric value"){
+        rightType = "int";
+      }
+
+      if(leftType == rightType){
+        return new SymbolTableEntry("assignment", leftType);
+      } else {
+        cout << "Type error (" << line << ", " << col << "): Cannot assign '" 
+          << rightType << "' to '" << leftType << "'"<< endl;
+      }
+
+      return 0;
+    }
 };
 
 class NodeParamList : public Node
@@ -692,6 +1578,39 @@ class NodeParamList : public Node
         *out << "void";
       }
     }
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      string types;
+      Node* arglist = left;
+      SymbolTableEntry* thisEntry;
+
+      if(!arglist){
+        return new SymbolTableEntry("arglist", "< >");
+      }
+
+      types = ">";
+      while(arglist){
+        thisEntry = arglist->getright()->typeCheck(parent);
+
+        if(thisEntry){
+          types = " " + types;
+          if(thisEntry->getType() == "numeric value"){
+            types = "int" + types;
+          } else {
+            types = thisEntry->getType() + types;
+          }
+        } else {
+          cout << "Type error (" << line << ", " << col 
+            << "): Invalid parameters." << endl;
+          return 0;
+        }
+        arglist = arglist->getleft();
+      }
+      types = "< " + types;
+
+      return new SymbolTableEntry("arglist", types);
+    }
 };
 
 class NodePrint : public Node
@@ -705,6 +1624,25 @@ class NodePrint : public Node
       if(left) left->prettyPrint(out);
       *out << "END prettyPrint" << endl;
     }
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      Node* argument = left->getleft();
+      SymbolTableEntry* entry;
+
+      // Make sure all of the arguments are numbers.
+      while(argument){
+        entry = argument->getright()->typeCheck(parent);
+        if(entry->getType() != "int" && entry->getType() != "numeric value"){
+          cout << "Type error (" << line << ", " << col << "): print() only "
+            << "accepts int arguments." << endl;
+          return 0;
+        }
+        argument = argument->getleft();
+      }
+
+      return new SymbolTableEntry("print", "void");
+    }
 };
 
 class NodeRead : public Node
@@ -715,6 +1653,11 @@ class NodeRead : public Node
     virtual void prettyPrint(ostream *out)
     {
       *out << "read()" << endl;
+    }
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      return new SymbolTableEntry("read", "int");
     }
 };
 
@@ -728,6 +1671,35 @@ class NodeFunct : public Node
       *out << "Function Declaration:" << endl;
       if(left) left->prettyPrint(out);
       *out << "END function declaration" << endl;
+    }
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      SymbolTableEntry* classEntry = left->getleft()->typeCheck(parent);
+      SymbolTableEntry* thisEntry = right->typeCheck(parent);
+
+      if(!classEntry){
+        cout << "Type error (" << line << ", " << col << "): Unknown type."
+          << endl;
+        return 0;
+      }
+
+      classEntry = parent->find(classEntry->getType());
+      if(!classEntry->getSymbolTable()){
+        cout << "Type error (" << line << ", " << col << "): Call does not "
+          << "reference a class." << endl;
+        return 0;
+      }
+
+      string type = left->getright()->getstring() + " " + thisEntry->getType();
+      thisEntry = classEntry->getSymbolTable()->find(type);
+
+      if(!thisEntry){
+        cout << "Type error (" << line << ", " << col << "): Couldn't find '"
+          << type << "' in " << classEntry->getIdentifier() << endl;
+      }
+
+      return thisEntry;
     }
 };
 
@@ -785,6 +1757,45 @@ class NodeOptional : public Node
       }
       *out << "END option:" << endl;
     }
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      if(left){
+        if(left->typeCheck(parent)){
+          myType = left->typeCheck(parent)->getType();
+        }
+        return left->typeCheck(parent);
+      } else {
+        return new SymbolTableEntry("void", "void");
+      }
+    }
+
+    virtual bool hasReturn(){
+      if(left) return true;
+      else return false;
+    }
+
+    virtual bool isReturnValid(string type)
+    {
+      if(left){
+        if(myType == "numeric value"){
+          myType = "int";
+        }
+
+        if(myType != type){
+          cout << "Type error (" << line << ", " << col << "): Return types"
+            << " for function do not match declaration." << endl;
+          return false;
+        } else {
+          return true;
+        }
+      } else {
+        return true;
+      }
+    }
+
+  protected:
+    string myType;
 };
 
 class NodeEmptyParam : public Node
@@ -807,6 +1818,12 @@ class NodeThis : public Node
     {
       *out << " this";
     }
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      //cout << "NodeThis: Type checking" << endl;
+      return parent->find(parent->getClassName());
+    }
 };
 
 class NodeTemp : public Node
@@ -824,12 +1841,43 @@ class NodeTemp : public Node
     {
       return left->getstring();
     }
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      return right->typeCheck(parent);
+    }
 };
 
 class NodeParamListAndBlock : public Node
 {
   public:
     NodeParamListAndBlock(Node* paramList, Node* Block) : Node(paramList, Block) {}
+
+    virtual void generateSymbolTable(SymbolTable* parent)
+    {
+      // cout << "NodeParamListAndBlock: Generating symbol table." << endl;
+      myTable = new SymbolTable(sval.empty() ? "Inner Block" : sval, parent);
+      if(left) left->generateSymbolTable(myTable);
+      if(right && right->getleft()) right->getleft()->generateSymbolTable(myTable);
+    }
+
+    virtual SymbolTableEntry* typeCheck(SymbolTable* parent)
+    {
+      // cout << "NodeParamListAndBlock: Type Checking " << endl;
+      if(myTable) {
+        if(right->getleft()){
+          return right->getleft()->typeCheck(myTable);
+        }
+        else {
+          return 0;
+        }
+      } else {
+        return 0;
+      }
+    }
+  
+  private:
+    SymbolTable* myTable;
 };
 
 #endif

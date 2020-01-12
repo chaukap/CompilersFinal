@@ -32,13 +32,9 @@ class SymbolTableEntry
   public:
     SymbolTableEntry(string ident, string typ)
     {
+      mySymbolTable = 0;
       name = ident;
       type = typ;
-    }
-
-    ~SymbolTableEntry()
-    {
-      delete paramList;
     }
 
     /* Return the identifier of this entry */
@@ -61,60 +57,43 @@ class SymbolTableEntry
 
     virtual SymbolTable* getSymbolTable()
     {
-      return 0;
-    }
-
-    virtual vector<string>* getParamList()
-    {
-      return 0;
+      return mySymbolTable;
     }
 
   protected: 
     string name;
     string type;
-    vector<string>* paramList;
+    SymbolTable* mySymbolTable;
+
+    SymbolTableEntry(){}
 };
 
 class ClassSymbolTableEntry : public SymbolTableEntry
 {
   public:
     ClassSymbolTableEntry(string ident, string typ,
-                          SymbolTable* symbolTable) : SymbolTableEntry(ident, typ)
+                          SymbolTable* symbolTable)
     {
+      name = ident;
+      type = typ;
       mySymbolTable = symbolTable;
     }
-
-    virtual SymbolTable* getSymbolTable()
-    {
-      return mySymbolTable;
-    }
-
-  protected:
-    SymbolTable* mySymbolTable;
 };
 
 class ConstructorSymbolTableEntry : public SymbolTableEntry
 {
   public:
-    ConstructorSymbolTableEntry(string ident, string typ,
-                                vector<string>* parameterList=0) : SymbolTableEntry(ident, typ)
+    ConstructorSymbolTableEntry(string ident, string typ)
     {
-      paramList = parameterList;
+      mySymbolTable = 0;
+      type = typ;
+      name = ident;
     }
 
     /* Print the information stored in this entry */
     virtual void print(ostream* out)
     {
       *out << type << " " << name;
-      *out << " < ";
-      if(paramList)
-      {
-        for(int i = 0; i < paramList->size(); i++)
-        {
-          *out << paramList->at(i) << " ";
-        }
-      }
-      *out << ">";
     }
 };
 
@@ -122,24 +101,23 @@ class MethodSymbolTableEntry : public SymbolTableEntry
 {
   public:
     MethodSymbolTableEntry(string ident, string typ,
-                           vector<string>* parameterList=0) : SymbolTableEntry(ident, typ)
+                           vector<string>* parameterList=0)
     {
-      paramList = parameterList;
+      mySymbolTable = 0;
+      type = typ;
+      name = ident;
+      if(parameterList){
+        for(int i = 0; i < parameterList->size(); ++i){
+          name += " ";
+          name += parameterList->at(i);
+        }
+      }
     }
 
     /* Print the information stored in this entry */
     virtual void print(ostream* out)
     {
       *out << type << " " << name;
-      *out << " < ";
-      if(paramList)
-      {
-        for(int i = 0; i < paramList->size(); i++)
-        {
-          *out << paramList->at(i) << " ";
-        }
-      }
-      *out << ">";
     }
 };
 

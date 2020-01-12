@@ -1,4 +1,4 @@
-// program5.cpp
+// program6.cpp
 // Chandler Haukap
 // 10/25/19
 // COSC 4785 Program 3
@@ -7,7 +7,7 @@
 
 #include "symbolTable.hpp"
 #include "node.hpp"
-#include "program5.tab.hpp"
+#include "program6.tab.hpp"
 #include<iostream>
 #include<FlexLexer.h>
 #include<queue>
@@ -37,23 +37,25 @@ int main()
   yyparse();
   cout << endl << endl;
 
-
   Node* top;
-  while(!classes.empty()){
+  for(int i = 0; i < classes.size(); ++i){
     top = classes.front();
     top->generateSymbolTable(baseSymbolTable);
+    classes.push(top);
     classes.pop();
   }
 
-  baseSymbolTable->print(&cout, 0);
-
-  /*
-  while(!derivations.empty()){
-    cout << derivations.top();
-    cout << endl;
-    derivations.pop();
+  while(!classes.empty()){
+    top = classes.front();
+    top->typeCheck(baseSymbolTable);
+    classes.pop();
   }
-  */
+
+  baseSymbolTable->hasOneMain();
+
+  cout << endl;
+
+  baseSymbolTable->print(&cout, 0);
 }
 
 void symbolTableTest()
